@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/use-auth"
+import { RequestSheet } from "./request-sheet"
 import { strapiGet, resolveField, type StrapiResponse, type Request } from "@/lib/strapi"
 import {
   Table,
@@ -25,12 +26,16 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { Button } from "@/components/ui/button"
 import {
   IconArrowUpRight,
   IconCalendarEvent,
   IconCircleCheck,
   IconCircleX,
   IconCreditCard,
+  IconCopy,
+  IconCheck,
+  IconPlus,
 } from "@tabler/icons-react"
 
 const PAGE_SIZE = 20
@@ -145,7 +150,7 @@ function TablePagination({
   add(pageCount)
 
   return (
-    <Pagination className="mt-4">
+    <Pagination className="w-auto">
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
@@ -191,8 +196,35 @@ function TablePagination({
 
 export default function RequestsPage() {
   const auth = useAuth()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<Tab>("all")
   const [page, setPage] = useState(1)
+  const [copied, setCopied] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [editingRequest, setEditingRequest] = useState<Request | undefined>()
+
+  function copyBookingUrl() {
+    const url = `${window.location.origin}/book`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  function openCreate() {
+    setEditingRequest(undefined)
+    setSheetOpen(true)
+  }
+
+  function openEdit(req: Request) {
+    setEditingRequest(req)
+    setSheetOpen(true)
+  }
+
+  function handleSuccess() {
+    queryClient.invalidateQueries({ queryKey: ["requests"] })
+    queryClient.invalidateQueries({ queryKey: ["requests-count"] })
+  }
 
   // Stat counts (lightweight — pageSize=1, just reads meta.pagination.total)
   const { data: allStats, isLoading: statsLoading } = useCount("", auth.jwt)
@@ -235,6 +267,35 @@ export default function RequestsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Booking Requests</h1>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={openCreate} className="gap-2">
+            <IconPlus className="size-4" />
+            New Request
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={copyBookingUrl}
+            className="gap-2"
+          >
+            {copied ? (
+              <>
+                <IconCheck className="size-4 text-green-600" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <IconCopy className="size-4" />
+                Copy booking URL
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -338,7 +399,11 @@ export default function RequestsPage() {
                           requests.map((req) => {
                             const a = req.attributes
                             return (
-                              <TableRow key={req.id}>
+                              <TableRow
+                                key={req.id}
+                                className="cursor-pointer"
+                                onClick={() => openEdit(req)}
+                              >
                                 <TableCell className="pl-6 font-mono text-xs">
                                   {a.ref_id ?? "—"}
                                 </TableCell>
@@ -373,8 +438,8 @@ export default function RequestsPage() {
                     </Table>
 
                     <div className="flex items-center justify-between border-t px-6 py-3">
-                      <p className="text-muted-foreground text-sm">
-                        Page {page} of {pageCount} · {tabTotal} total
+                      <p className="text-muted-foreground shrink-0 text-sm tabular-nums whitespace-nowrap">
+                        Page {page} of {pageCount} &middot; {tabTotal} total
                       </p>
                       <TablePagination page={page} pageCount={pageCount} onPage={setPage} />
                     </div>
@@ -385,6 +450,13 @@ export default function RequestsPage() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <RequestSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        request={editingRequest}
+        onSuccess={handleSuccess}
+      />
     </div>
   )
 }

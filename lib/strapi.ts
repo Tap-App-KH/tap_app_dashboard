@@ -105,10 +105,25 @@ export async function strapiGet<T>(path: string, jwt?: string): Promise<T> {
   return handleResponse<T>(res)
 }
 
-export async function strapiPost<T>(path: string, body: unknown): Promise<T> {
+export async function strapiPost<T>(path: string, body: unknown, jwt?: string): Promise<T> {
   const res = await fetch(`${STRAPI_URL}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<T>(res)
+}
+
+export async function strapiPut<T>(path: string, body: unknown, jwt: string): Promise<T> {
+  const res = await fetch(`${STRAPI_URL}${path}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${jwt}`,
+    },
     body: JSON.stringify(body),
   })
   return handleResponse<T>(res)

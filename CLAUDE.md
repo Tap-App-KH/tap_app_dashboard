@@ -27,7 +27,7 @@ No test infrastructure is currently configured.
   - `query-provider.tsx` — wraps TanStack Query (`@tanstack/react-query`). The `QueryClient` is a singleton in the browser (shared across renders) but freshly created on the server per request. Default `staleTime` is 60 seconds.
   - `auth-provider.tsx` — stores Strapi JWT + user in `localStorage`. Exposes `login()`, `logout()`, `isAuthenticated`, `jwt`, `user`. Renders `null` until hydrated from storage.
 - [lib/utils.ts](lib/utils.ts) — Exports `cn()`, the standard helper for merging Tailwind classes (`clsx` + `tailwind-merge`).
-- [lib/strapi.ts](lib/strapi.ts) — Typed Strapi V4 fetch client. Key exports: `strapiLogin`, `strapiGet`, `strapiPost`. Base URL is `http://localhost:1337`. Also exports TypeScript interfaces: `Request`, `RequesterDetails`, `PickupDropoffDetails`, `StrapiResponse`, `AuthResponse`.
+- [lib/strapi.ts](lib/strapi.ts) — Typed Strapi V4 fetch client. Key exports: `strapiLogin`, `strapiGet`, `strapiPost` (optional JWT), `strapiPut` (requires JWT). Base URL is `http://localhost:1337`. Also exports TypeScript interfaces: `Request`, `RequestAttributes`, `RequesterDetails`, `PickupDropoffDetails`, `LabelValue`, `StrapiResponse`, `AuthResponse`. Use `resolveField()` to safely unwrap `pickupDate`/`pickupTime` which may be a plain string or `{ label, value }` object.
 - [hooks/use-auth.ts](hooks/use-auth.ts) — Re-exports `useAuth()` from `auth-provider`. Use this in any component that needs auth state or login/logout.
 
 ### Styling
@@ -58,6 +58,13 @@ Strapi V4 runs locally at `http://localhost:1337`. Content type: `api::request.r
 
 **Auth:** `POST /api/auth/local` with `{ identifier, password }` → `{ jwt, user }`. The JWT is stored in `localStorage` via `auth-provider.tsx`.
 
+**Strapi V4 API patterns used:**
+- List: `GET /api/requests?populate=*&sort=createdAt:desc&pagination[page]=1&pagination[pageSize]=20`
+- Filter: `&filters[accepted][$eq]=true` / `&filters[accepted][$ne]=true`
+- Count-only: `pagination[pageSize]=1` — reads `meta.pagination.total` without fetching all rows
+- Create: `POST /api/requests` with `{ data: { ... } }`
+- Update: `PUT /api/requests/:id` with `{ data: { ... } }` + Bearer JWT
+
 ### Routes
 
 | Route | Access | Purpose |
@@ -65,9 +72,21 @@ Strapi V4 runs locally at `http://localhost:1337`. Content type: `api::request.r
 | `/` | any | Redirects to `/dashboard/requests` or `/login` |
 | `/login` | public | Strapi login form |
 | `/book` | public | Booking request submission form |
-| `/dashboard/requests` | protected | Lists all booking requests from Strapi |
+| `/dashboard/requests` | protected | Lists, creates, and edits booking requests |
 
 The dashboard layout (`app/dashboard/layout.tsx`) guards all `/dashboard/*` routes — it redirects to `/login` if no JWT is present.
+
+### Dashboard — Requests page
+
+`app/dashboard/requests/page.tsx` — main list view. Features:
+- 4 stat cards (Total, Accepted, Cancelled, Paid) using lightweight count-only queries (`pageSize=1`)
+- Tabbed table: All / Pending / Accepted / Cancelled — each tab applies a server-side filter
+- Server-side pagination, `PAGE_SIZE = 20`
+- "New Request" button → opens `RequestSheet` in create mode
+- Clicking any table row → opens `RequestSheet` in edit mode
+- After save: invalidates `["requests"]` and `["requests-count"]` query keys
+
+`app/dashboard/requests/request-sheet.tsx` — shared create/edit Sheet component. `request` prop undefined = create mode, defined = edit mode. Fields: fullname, phone, wishes, pickup, dropoff, pickupDate, pickupTime.
 
 ### Pagination
 
