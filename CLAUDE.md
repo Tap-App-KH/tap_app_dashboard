@@ -21,7 +21,7 @@ No test infrastructure is currently configured.
 ### Key directories
 
 - [app/](app/) — Routes and layouts. `layout.tsx` is the root shell; `page.tsx` is `/`. Add new routes as `app/<route>/page.tsx`.
-- [components/ui/](components/ui/) — shadcn/ui components (copy-paste library built on Radix UI + CVA). Add new ones via `npx shadcn@latest add <component>`.
+- [components/ui/](components/ui/) — shadcn/ui components (copy-paste library built on Radix UI + CVA). Add new ones via `npx shadcn@latest add <component>`. **Always prefer shadcn/ui components over custom or native HTML elements where a suitable component exists.**
 - [components/providers/](components/providers/) — All React context providers. `index.tsx` exports `<Providers>` which is the single wrapper used in the root layout. Add new providers here and compose them in `index.tsx`.
   - `theme-provider.tsx` — wraps next-themes; press `d` in the browser to toggle light/dark.
   - `query-provider.tsx` — wraps TanStack Query (`@tanstack/react-query`). The `QueryClient` is a singleton in the browser (shared across renders) but freshly created on the server per request. Default `staleTime` is 60 seconds.
