@@ -22,11 +22,14 @@ import {
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
+import { useTheme } from "next-themes"
 import {
   IconLayoutDashboard,
   IconCalendarEvent,
   IconLogout,
   IconCar,
+  IconSun,
+  IconMoon,
 } from "@tabler/icons-react"
 
 const navItems = [
@@ -45,6 +48,7 @@ export default function DashboardLayout({
   const auth = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const { resolvedTheme, setTheme } = useTheme()
 
   useEffect(() => {
     if (!auth.isAuthenticated) {
@@ -143,6 +147,15 @@ export default function DashboardLayout({
               {pathname.split("/").at(-1)}
             </span>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            title="Toggle theme"
+          >
+            {resolvedTheme === "dark" ? <IconSun className="size-4" /> : <IconMoon className="size-4" />}
+          </Button>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-6">{children}</div>
       </SidebarInset>
