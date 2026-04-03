@@ -51,13 +51,12 @@ import {
 
 const PAGE_SIZE = 20
 
-type Tab = "all" | "pending" | "accepted" | "cancelled"
+type Tab = "all" | "accepted" | "paid" | "cancelled"
 
 function tabFilter(tab: Tab): string {
   if (tab === "accepted") return "&filters[accepted][$eq]=true"
   if (tab === "cancelled") return "&filters[cancelled][$eq]=true"
-  if (tab === "pending")
-    return "&filters[accepted][$ne]=true&filters[cancelled][$ne]=true"
+  if (tab === "paid") return "&filters[paid][$eq]=true"
   return ""
 }
 
@@ -81,11 +80,13 @@ function StatusBadge({ attrs }: { attrs: Request["attributes"] }) {
   if (attrs.accepted && attrs.paid)
     return (
       <div className="flex gap-1">
-        <Badge>Accepted</Badge>
-        <Badge variant="secondary">Paid</Badge>
+        <Badge variant="secondary">Accepted</Badge>
+        <Badge className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600">
+          Paid
+        </Badge>
       </div>
     )
-  if (attrs.accepted) return <Badge>Accepted</Badge>
+  if (attrs.accepted) return <Badge variant="secondary">Accepted</Badge>
   return (
     <Badge variant="outline" className="text-muted-foreground">
       Pending
@@ -263,8 +264,6 @@ export default function RequestsPage() {
   const acceptedTotal = acceptedStats?.meta.pagination?.total ?? 0
   const cancelledTotal = cancelledStats?.meta.pagination?.total ?? 0
   const paidTotal = paidStats?.meta.pagination?.total ?? 0
-  const pendingTotal = total - acceptedTotal - cancelledTotal
-
   // Main paginated table query
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["requests", activeTab, page],
@@ -287,8 +286,8 @@ export default function RequestsPage() {
 
   const TABS: { value: Tab; label: string; count: number }[] = [
     { value: "all", label: "All", count: total },
-    { value: "pending", label: "Pending", count: pendingTotal },
     { value: "accepted", label: "Accepted", count: acceptedTotal },
+    { value: "paid", label: "Paid", count: paidTotal },
     { value: "cancelled", label: "Cancelled", count: cancelledTotal },
   ]
 
@@ -344,21 +343,21 @@ export default function RequestsPage() {
           loading={statsLoading}
         />
         <StatCard
-          title="Cancelled"
-          value={cancelledTotal}
-          total={total}
-          description="Cancelled requests"
-          detail="No action needed"
-          icon={IconCircleX}
-          loading={statsLoading}
-        />
-        <StatCard
           title="Paid"
           value={paidTotal}
           total={total}
           description="Completed payments"
           detail="Revenue confirmed"
           icon={IconCreditCard}
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Cancelled"
+          value={cancelledTotal}
+          total={total}
+          description="Cancelled requests"
+          detail="No action needed"
+          icon={IconCircleX}
           loading={statsLoading}
         />
       </div>
