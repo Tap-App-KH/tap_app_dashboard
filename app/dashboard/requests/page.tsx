@@ -6,10 +6,12 @@ import { useAuth } from "@/hooks/use-auth"
 import { RequestSheet } from "./request-sheet"
 import {
   strapiGet,
+  strapiPut,
   resolveField,
   type StrapiResponse,
   type Request,
 } from "@/lib/strapi"
+import { formatDate, formatDateTime } from "@/lib/format"
 import {
   Table,
   TableBody,
@@ -39,7 +41,16 @@ import {
 } from "@/components/ui/pagination"
 import { Button } from "@/components/ui/button"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
+import {
   IconArrowUpRight,
+  IconArrowBackUp,
   IconCalendarEvent,
   IconCircleCheck,
   IconCircleX,
@@ -47,6 +58,8 @@ import {
   IconCopy,
   IconCheck,
   IconPlus,
+  IconDotsVertical,
+  IconReceiptRefund,
 } from "@tabler/icons-react"
 
 const PAGE_SIZE = 20
@@ -254,6 +267,24 @@ export default function RequestsPage() {
     queryClient.invalidateQueries({ queryKey: ["requests-count"] })
   }
 
+  async function updateStatus(
+    req: Request,
+    patch: Partial<Pick<Request["attributes"], "accepted" | "paid" | "cancelled">>,
+    label: string
+  ) {
+    try {
+      await strapiPut<StrapiResponse<Request>>(
+        `/api/requests/${req.id}`,
+        { data: patch },
+        auth.jwt!
+      )
+      toast.success(label)
+      handleSuccess()
+    } catch {
+      toast.error(`Failed: ${label}`)
+    }
+  }
+
   // Stat counts (lightweight — pageSize=1, just reads meta.pagination.total)
   const { data: allStats, isLoading: statsLoading } = useCount("", auth.jwt)
   const { data: acceptedStats } = useCount(tabFilter("accepted"), auth.jwt)
@@ -413,16 +444,17 @@ export default function RequestsPage() {
                           <TableHead>Phone</TableHead>
                           <TableHead>Pickup</TableHead>
                           <TableHead>Dropoff</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Time</TableHead>
-                          <TableHead className="pr-6">Status</TableHead>
+                          <TableHead>Pickup At</TableHead>
+                          <TableHead>Submitted At</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-10 pr-6" />
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {requests.length === 0 ? (
                           <TableRow>
                             <TableCell
-                              colSpan={8}
+                              colSpan={10}
                               className="py-12 text-center text-muted-foreground"
                             >
                               No requests in this category
@@ -444,7 +476,9 @@ export default function RequestsPage() {
                                   {a.requester_details?.fullname ?? "—"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {a.requester_details?.phone ?? "—"}
+                                  {[a.requester_details?.phoneCode?.value, a.requester_details?.phone]
+  .filter(Boolean)
+  .join("") || "—"}
                                 </TableCell>
                                 <TableCell className="max-w-40 truncate text-muted-foreground">
                                   {a.pickup_dropoff_details?.pickup ?? "—"}
@@ -453,21 +487,99 @@ export default function RequestsPage() {
                                   {a.pickup_dropoff_details?.dropoff ?? "—"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {resolveField(
-                                    a.pickup_dropoff_details?.pickupDate
-                                  ) !== "—"
-                                    ? resolveField(
-                                        a.pickup_dropoff_details?.pickupDate
-                                      )
-                                    : (a.date ?? "—")}
+                                  {(() => {
+                                    const date =
+                                      resolveField(a.pickup_dropoff_details?.pickupDate) !== "—"
+                                        ? resolveField(a.pickup_dropoff_details?.pickupDate)
+                                        : (a.date ?? "")
+                                    const time = resolveField(a.pickup_dropoff_details?.pickupTime)
+                                    if (!date) return "—"
+                                    return time !== "—"
+                                      ? formatDateTime(date, time)
+                                      : formatDate(date)
+                                  })()}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {resolveField(
-                                    a.pickup_dropoff_details?.pickupTime
-                                  )}
+                                  {a.createdAt ? formatDateTime(a.createdAt) : "—"}
                                 </TableCell>
-                                <TableCell className="pr-6">
+                                <TableCell>
                                   <StatusBadge attrs={a} />
+                                </TableCell>
+                                <TableCell className="pr-6" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon-sm">
+                                        <IconDotsVertical className="size-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-44">
+                                      {!a.accepted && (
+                                        <DropdownMenuItem
+                                          className="whitespace-nowrap"
+                                          disabled={!!a.cancelled}
+                                          onClick={() =>
+                                            updateStatus(req, { accepted: true }, "Marked as accepted")
+                                          }
+                                        >
+                                          <IconCircleCheck className="size-4" />
+                                          Mark as Accepted
+                                        </DropdownMenuItem>
+                                      )}
+                                      {!a.accepted && (
+                                        <DropdownMenuSeparator />
+                                      )}
+                                      {!a.paid ? (
+                                        <DropdownMenuItem
+                                          className="whitespace-nowrap"
+                                          disabled={!a.accepted || !!a.cancelled}
+                                          onClick={() =>
+                                            updateStatus(req, { paid: true }, "Marked as paid")
+                                          }
+                                        >
+                                          <IconCreditCard className="size-4" />
+                                          Mark as Paid
+                                        </DropdownMenuItem>
+                                      ) : (
+                                        <DropdownMenuItem
+                                          className="whitespace-nowrap"
+                                          disabled={!!a.cancelled}
+                                          onClick={() =>
+                                            updateStatus(req, { paid: false }, "Marked as refunded")
+                                          }
+                                        >
+                                          <IconReceiptRefund className="size-4" />
+                                          Refund
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuSeparator />
+                                      {!a.cancelled ? (
+                                        <DropdownMenuItem
+                                          className="whitespace-nowrap text-destructive focus:text-destructive"
+                                          disabled={!!a.paid}
+                                          onClick={() =>
+                                            updateStatus(
+                                              req,
+                                              { cancelled: true, accepted: false, paid: false },
+                                              "Request cancelled"
+                                            )
+                                          }
+                                        >
+                                          <IconCircleX className="size-4" />
+                                          Cancel
+                                        </DropdownMenuItem>
+                                      ) : (
+                                        <DropdownMenuItem
+                                          className="whitespace-nowrap"
+                                          onClick={() =>
+                                            updateStatus(req, { cancelled: false }, "Cancellation removed")
+                                          }
+                                        >
+                                          <IconArrowBackUp className="size-4" />
+                                          Uncancel
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </TableCell>
                               </TableRow>
                             )

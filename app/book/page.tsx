@@ -25,7 +25,7 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
-import { COUNTRY_CODES } from "@/lib/country-codes"
+import { COUNTRY_CODES, flagToIso } from "@/lib/country-codes"
 import { IconCircleCheckFilled } from "@tabler/icons-react"
 import {
   IconBrandTelegram,
@@ -95,7 +95,7 @@ function CountryCodeCombobox({
   onChange: (v: string) => void
 }) {
   const [open, setOpen] = useState(false)
-  const selected = COUNTRY_CODES.find((c) => c.code === value)
+  const selected = COUNTRY_CODES.find((c) => flagToIso(c.flag) === value)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -107,7 +107,7 @@ function CountryCodeCombobox({
           aria-expanded={open}
           className="h-9 justify-between gap-1 bg-muted px-3 font-normal whitespace-nowrap"
         >
-          {selected ? `${selected.flag} ${selected.code}` : "+855"}
+          {selected ? `${selected.flag} ${selected.code}` : "🇰🇭 +855"}
           <IconChevronDown className="size-3 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
@@ -117,24 +117,28 @@ function CountryCodeCombobox({
           <CommandList>
             <CommandEmpty>No country found.</CommandEmpty>
             <CommandGroup>
-              {COUNTRY_CODES.map((c) => (
-                <CommandItem
-                  key={`${c.country}-${c.code}`}
-                  value={`${c.country} ${c.code}`}
-                  onSelect={() => {
-                    onChange(c.code)
-                    setOpen(false)
-                  }}
-                >
-                  <span>
-                    {c.flag} {c.code}
-                  </span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {c.country}
-                  </span>
-                  {value === c.code && <IconCheck className="ml-auto size-4" />}
-                </CommandItem>
-              ))}
+              {COUNTRY_CODES.map((c) => {
+                const iso = flagToIso(c.flag)
+                return (
+                  <CommandItem
+                    key={iso}
+                    value={`${c.country} ${c.code}`}
+                    onSelect={() => {
+                      onChange(iso)
+                      setOpen(false)
+                    }}
+                    className="flex items-center overflow-hidden"
+                  >
+                    <span className="shrink-0">
+                      {c.flag} {c.code}
+                    </span>
+                    <span className="ml-2 truncate text-xs text-muted-foreground">
+                      {c.country}
+                    </span>
+                    {value === iso && <IconCheck className="ml-auto shrink-0 size-4" />}
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           </CommandList>
         </Command>
@@ -157,7 +161,7 @@ export default function BookPage() {
     defaultValues: {
       hasPet: false,
       needsBabySeat: false,
-      phoneCode: "+855",
+      phoneCode: "kh",
       sex: "female" as const,
       nationality: "cambodian" as const,
     },
@@ -178,6 +182,17 @@ export default function BookPage() {
         .join("")
         .toUpperCase()}`
 
+      const selectedCountry = COUNTRY_CODES.find(
+        (c) => flagToIso(c.flag) === values.phoneCode
+      )
+      const phoneCodePayload = selectedCountry
+        ? {
+            flag: values.phoneCode,
+            label: selectedCountry.code,
+            value: selectedCountry.code,
+          }
+        : undefined
+
       await strapiPost<StrapiResponse<Request>>("/api/requests", {
         data: {
           ref_id: refId,
@@ -186,7 +201,8 @@ export default function BookPage() {
           transfer_details: {},
           requester_details: {
             fullname: values.fullname,
-            phone: `${values.phoneCode}${values.phone}`,
+            phoneCode: phoneCodePayload,
+            phone: values.phone,
             wishes: values.wishes ?? "",
             sex: values.sex,
             nationality: values.nationality,

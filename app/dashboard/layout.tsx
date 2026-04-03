@@ -23,11 +23,11 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
+import Image from "next/image"
 import {
   IconLayoutDashboard,
   IconCalendarEvent,
   IconLogout,
-  IconCar,
   IconSun,
   IconMoon,
 } from "@tabler/icons-react"
@@ -66,8 +66,8 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <Link href="/dashboard/requests">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                    <IconCar className="size-4" />
+                  <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
+                    <Image src="/logo.png" alt="Tap App" width={32} height={32} className="size-8 object-contain" />
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none">
                     <span className="font-semibold">Tap App</span>

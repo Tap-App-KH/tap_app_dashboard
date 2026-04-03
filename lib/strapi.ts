@@ -24,7 +24,16 @@ export interface StrapiError {
 export interface RequesterDetails {
   fullname: string
   phone: string
+  phoneCode?: { flag: string; label: string; value: string }
   wishes: string
+  sex?: "male" | "female"
+  nationality?: "cambodian" | "non-cambodian"
+  age?: string
+  email?: string
+  whatsapp?: string
+  telegram?: string
+  hasPet?: boolean
+  needsBabySeat?: boolean
 }
 
 export interface LabelValue {
@@ -48,6 +57,12 @@ export function resolveField(
   return field.value || field.label || "—"
 }
 
+export interface TransferDetails {
+  price?: number | null
+  costPrice?: number | null
+  type?: "private" | "shared" | null
+}
+
 export interface RequestAttributes {
   ref_id: string | null
   accepted: boolean | null
@@ -55,6 +70,7 @@ export interface RequestAttributes {
   paid: boolean | null
   requester_details: RequesterDetails | null
   pickup_dropoff_details: PickupDropoffDetails | null
+  transfer_details: TransferDetails | null
   date: string | null
   temp_user_id: string | null
   createdAt: string
