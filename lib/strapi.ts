@@ -41,7 +41,7 @@ export interface PickupDropoffDetails {
 
 /** Safely extract a display string from a plain string or {label,value} object */
 export function resolveField(
-  field: string | LabelValue | null | undefined,
+  field: string | LabelValue | null | undefined
 ): string {
   if (!field) return "—"
   if (typeof field === "string") return field || "—"
@@ -85,7 +85,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 export async function strapiLogin(
   identifier: string,
-  password: string,
+  password: string
 ): Promise<AuthResponse> {
   const res = await fetch(`${STRAPI_URL}/api/auth/local`, {
     method: "POST",
@@ -105,7 +105,11 @@ export async function strapiGet<T>(path: string, jwt?: string): Promise<T> {
   return handleResponse<T>(res)
 }
 
-export async function strapiPost<T>(path: string, body: unknown, jwt?: string): Promise<T> {
+export async function strapiPost<T>(
+  path: string,
+  body: unknown,
+  jwt?: string
+): Promise<T> {
   const res = await fetch(`${STRAPI_URL}${path}`, {
     method: "POST",
     headers: {
@@ -117,7 +121,11 @@ export async function strapiPost<T>(path: string, body: unknown, jwt?: string): 
   return handleResponse<T>(res)
 }
 
-export async function strapiPut<T>(path: string, body: unknown, jwt: string): Promise<T> {
+export async function strapiPut<T>(
+  path: string,
+  body: unknown,
+  jwt: string
+): Promise<T> {
   const res = await fetch(`${STRAPI_URL}${path}`, {
     method: "PUT",
     headers: {

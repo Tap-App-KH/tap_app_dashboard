@@ -4,7 +4,12 @@ import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/use-auth"
 import { RequestSheet } from "./request-sheet"
-import { strapiGet, resolveField, type StrapiResponse, type Request } from "@/lib/strapi"
+import {
+  strapiGet,
+  resolveField,
+  type StrapiResponse,
+  type Request,
+} from "@/lib/strapi"
 import {
   Table,
   TableBody,
@@ -14,7 +19,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -45,7 +56,8 @@ type Tab = "all" | "pending" | "accepted" | "cancelled"
 function tabFilter(tab: Tab): string {
   if (tab === "accepted") return "&filters[accepted][$eq]=true"
   if (tab === "cancelled") return "&filters[cancelled][$eq]=true"
-  if (tab === "pending") return "&filters[accepted][$ne]=true&filters[cancelled][$ne]=true"
+  if (tab === "pending")
+    return "&filters[accepted][$ne]=true&filters[cancelled][$ne]=true"
   return ""
 }
 
@@ -55,7 +67,7 @@ function useCount(filter: string, jwt: string | null) {
     queryFn: () =>
       strapiGet<StrapiResponse<Request[]>>(
         `/api/requests?pagination[pageSize]=1&pagination[page]=1${filter}`,
-        jwt ?? undefined,
+        jwt ?? undefined
       ),
     enabled: !!jwt,
     staleTime: 30_000,
@@ -74,7 +86,11 @@ function StatusBadge({ attrs }: { attrs: Request["attributes"] }) {
       </div>
     )
   if (attrs.accepted) return <Badge>Accepted</Badge>
-  return <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
+  return (
+    <Badge variant="outline" className="text-muted-foreground">
+      Pending
+    </Badge>
+  )
 }
 
 function StatCard({
@@ -155,7 +171,10 @@ function TablePagination({
         <PaginationItem>
           <PaginationPrevious
             href="#"
-            onClick={(e) => { e.preventDefault(); onPage(Math.max(1, page - 1)) }}
+            onClick={(e) => {
+              e.preventDefault()
+              onPage(Math.max(1, page - 1))
+            }}
             aria-disabled={page === 1}
             className={page === 1 ? "pointer-events-none opacity-50" : ""}
           />
@@ -171,20 +190,28 @@ function TablePagination({
               <PaginationLink
                 href="#"
                 isActive={p === page}
-                onClick={(e) => { e.preventDefault(); onPage(p) }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  onPage(p)
+                }}
               >
                 {p}
               </PaginationLink>
             </PaginationItem>
-          ),
+          )
         )}
 
         <PaginationItem>
           <PaginationNext
             href="#"
-            onClick={(e) => { e.preventDefault(); onPage(Math.min(pageCount, page + 1)) }}
+            onClick={(e) => {
+              e.preventDefault()
+              onPage(Math.min(pageCount, page + 1))
+            }}
             aria-disabled={page === pageCount}
-            className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+            className={
+              page === pageCount ? "pointer-events-none opacity-50" : ""
+            }
           />
         </PaginationItem>
       </PaginationContent>
@@ -244,7 +271,7 @@ export default function RequestsPage() {
     queryFn: () =>
       strapiGet<StrapiResponse<Request[]>>(
         `/api/requests?populate=*&sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${PAGE_SIZE}${tabFilter(activeTab)}`,
-        auth.jwt ?? undefined,
+        auth.jwt ?? undefined
       ),
     enabled: !!auth.jwt,
   })
@@ -267,7 +294,6 @@ export default function RequestsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-
       {/* Header row */}
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Booking Requests</h1>
@@ -343,7 +369,7 @@ export default function RequestsPage() {
           {TABS.map((t) => (
             <TabsTrigger key={t.value} value={t.value}>
               {t.label}
-              <span className="bg-muted text-muted-foreground ml-1.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums">
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground tabular-nums">
                 {t.count}
               </span>
             </TabsTrigger>
@@ -355,15 +381,20 @@ export default function RequestsPage() {
             <Card>
               <CardContent className="p-0">
                 {isError && (
-                  <p className="text-destructive px-6 py-12 text-center text-sm">
-                    {error instanceof Error ? error.message : "Failed to load requests"}
+                  <p className="px-6 py-12 text-center text-sm text-destructive">
+                    {error instanceof Error
+                      ? error.message
+                      : "Failed to load requests"}
                   </p>
                 )}
 
                 {isLoading && (
                   <div className="flex flex-col divide-y">
                     {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4 px-6 py-4">
+                      <div
+                        key={i}
+                        className="flex items-center gap-4 px-6 py-4"
+                      >
                         <Skeleton className="h-4 w-28" />
                         <Skeleton className="h-4 w-32" />
                         <Skeleton className="h-4 w-24" />
@@ -391,7 +422,10 @@ export default function RequestsPage() {
                       <TableBody>
                         {requests.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={8} className="text-muted-foreground py-12 text-center">
+                            <TableCell
+                              colSpan={8}
+                              className="py-12 text-center text-muted-foreground"
+                            >
                               No requests in this category
                             </TableCell>
                           </TableRow>
@@ -413,19 +447,25 @@ export default function RequestsPage() {
                                 <TableCell className="text-muted-foreground">
                                   {a.requester_details?.phone ?? "—"}
                                 </TableCell>
-                                <TableCell className="text-muted-foreground max-w-40 truncate">
+                                <TableCell className="max-w-40 truncate text-muted-foreground">
                                   {a.pickup_dropoff_details?.pickup ?? "—"}
                                 </TableCell>
-                                <TableCell className="text-muted-foreground max-w-40 truncate">
+                                <TableCell className="max-w-40 truncate text-muted-foreground">
                                   {a.pickup_dropoff_details?.dropoff ?? "—"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {resolveField(a.pickup_dropoff_details?.pickupDate) !== "—"
-                                    ? resolveField(a.pickup_dropoff_details?.pickupDate)
+                                  {resolveField(
+                                    a.pickup_dropoff_details?.pickupDate
+                                  ) !== "—"
+                                    ? resolveField(
+                                        a.pickup_dropoff_details?.pickupDate
+                                      )
                                     : (a.date ?? "—")}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {resolveField(a.pickup_dropoff_details?.pickupTime)}
+                                  {resolveField(
+                                    a.pickup_dropoff_details?.pickupTime
+                                  )}
                                 </TableCell>
                                 <TableCell className="pr-6">
                                   <StatusBadge attrs={a} />
@@ -438,10 +478,14 @@ export default function RequestsPage() {
                     </Table>
 
                     <div className="flex items-center justify-between border-t px-6 py-3">
-                      <p className="text-muted-foreground shrink-0 text-sm tabular-nums whitespace-nowrap">
+                      <p className="shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
                         Page {page} of {pageCount} &middot; {tabTotal} total
                       </p>
-                      <TablePagination page={page} pageCount={pageCount} onPage={setPage} />
+                      <TablePagination
+                        page={page}
+                        pageCount={pageCount}
+                        onPage={setPage}
+                      />
                     </div>
                   </>
                 )}

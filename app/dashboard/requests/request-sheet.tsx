@@ -53,16 +53,23 @@ function toFormValues(request: Request): FormValues {
     wishes: a.requester_details?.wishes ?? "",
     pickup: a.pickup_dropoff_details?.pickup ?? "",
     dropoff: a.pickup_dropoff_details?.dropoff ?? "",
-    pickupDate: resolveField(a.pickup_dropoff_details?.pickupDate) === "—"
-      ? ""
-      : resolveField(a.pickup_dropoff_details?.pickupDate),
-    pickupTime: resolveField(a.pickup_dropoff_details?.pickupTime) === "—"
-      ? ""
-      : resolveField(a.pickup_dropoff_details?.pickupTime),
+    pickupDate:
+      resolveField(a.pickup_dropoff_details?.pickupDate) === "—"
+        ? ""
+        : resolveField(a.pickup_dropoff_details?.pickupDate),
+    pickupTime:
+      resolveField(a.pickup_dropoff_details?.pickupTime) === "—"
+        ? ""
+        : resolveField(a.pickup_dropoff_details?.pickupTime),
   }
 }
 
-export function RequestSheet({ open, onOpenChange, request, onSuccess }: RequestSheetProps) {
+export function RequestSheet({
+  open,
+  onOpenChange,
+  request,
+  onSuccess,
+}: RequestSheetProps) {
   const auth = useAuth()
   const isEdit = !!request
 
@@ -79,10 +86,19 @@ export function RequestSheet({ open, onOpenChange, request, onSuccess }: Request
   // Re-populate form when switching between requests or create mode
   useEffect(() => {
     if (open) {
-      reset(request ? toFormValues(request) : {
-        fullname: "", phone: "", wishes: "",
-        pickup: "", dropoff: "", pickupDate: "", pickupTime: "",
-      })
+      reset(
+        request
+          ? toFormValues(request)
+          : {
+              fullname: "",
+              phone: "",
+              wishes: "",
+              pickup: "",
+              dropoff: "",
+              pickupDate: "",
+              pickupTime: "",
+            }
+      )
     }
   }, [open, request, reset])
 
@@ -108,19 +124,26 @@ export function RequestSheet({ open, onOpenChange, request, onSuccess }: Request
         await strapiPut<StrapiResponse<Request>>(
           `/api/requests/${request.id}`,
           body,
-          auth.jwt!,
+          auth.jwt!
         )
         toast.success("Request updated")
       } else {
-        await strapiPost<StrapiResponse<Request>>("/api/requests", body, auth.jwt ?? undefined)
+        await strapiPost<StrapiResponse<Request>>(
+          "/api/requests",
+          body,
+          auth.jwt ?? undefined
+        )
         toast.success("Request created")
       }
       onSuccess()
       onOpenChange(false)
     } catch (err) {
-      toast.error(isEdit ? "Failed to update request" : "Failed to create request", {
-        description: err instanceof Error ? err.message : "Please try again.",
-      })
+      toast.error(
+        isEdit ? "Failed to update request" : "Failed to create request",
+        {
+          description: err instanceof Error ? err.message : "Please try again.",
+        }
+      )
     }
   }
 
@@ -134,7 +157,9 @@ export function RequestSheet({ open, onOpenChange, request, onSuccess }: Request
         <SheetHeader className="px-6 py-4">
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
-            {isEdit ? "Update the booking details below." : "Fill in the details to create a new booking request."}
+            {isEdit
+              ? "Update the booking details below."
+              : "Fill in the details to create a new booking request."}
           </SheetDescription>
         </SheetHeader>
 
@@ -151,23 +176,40 @@ export function RequestSheet({ open, onOpenChange, request, onSuccess }: Request
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="fullname">Full Name</Label>
-              <Input id="fullname" placeholder="John Doe" {...register("fullname")} />
+              <Input
+                id="fullname"
+                placeholder="John Doe"
+                {...register("fullname")}
+              />
               {errors.fullname && (
-                <p className="text-destructive text-xs">{errors.fullname.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.fullname.message}
+                </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" type="tel" placeholder="+1 555 000 0000" {...register("phone")} />
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+1 555 000 0000"
+                {...register("phone")}
+              />
               {errors.phone && (
-                <p className="text-destructive text-xs">{errors.phone.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.phone.message}
+                </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="wishes">Notes / Wishes</Label>
-              <Input id="wishes" placeholder="Any special requests…" {...register("wishes")} />
+              <Input
+                id="wishes"
+                placeholder="Any special requests…"
+                {...register("wishes")}
+              />
             </div>
           </div>
 
@@ -179,34 +221,58 @@ export function RequestSheet({ open, onOpenChange, request, onSuccess }: Request
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="pickup">Pickup Location</Label>
-              <Input id="pickup" placeholder="Hotel, address…" {...register("pickup")} />
+              <Input
+                id="pickup"
+                placeholder="Hotel, address…"
+                {...register("pickup")}
+              />
               {errors.pickup && (
-                <p className="text-destructive text-xs">{errors.pickup.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.pickup.message}
+                </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="dropoff">Dropoff Location</Label>
-              <Input id="dropoff" placeholder="Airport, address…" {...register("dropoff")} />
+              <Input
+                id="dropoff"
+                placeholder="Airport, address…"
+                {...register("dropoff")}
+              />
               {errors.dropoff && (
-                <p className="text-destructive text-xs">{errors.dropoff.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.dropoff.message}
+                </p>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="pickupDate">Pickup Date</Label>
-                <Input id="pickupDate" type="date" {...register("pickupDate")} />
+                <Input
+                  id="pickupDate"
+                  type="date"
+                  {...register("pickupDate")}
+                />
                 {errors.pickupDate && (
-                  <p className="text-destructive text-xs">{errors.pickupDate.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.pickupDate.message}
+                  </p>
                 )}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="pickupTime">Pickup Time</Label>
-                <Input id="pickupTime" type="time" {...register("pickupTime")} />
+                <Input
+                  id="pickupTime"
+                  type="time"
+                  {...register("pickupTime")}
+                />
                 {errors.pickupTime && (
-                  <p className="text-destructive text-xs">{errors.pickupTime.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.pickupTime.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -216,11 +282,21 @@ export function RequestSheet({ open, onOpenChange, request, onSuccess }: Request
         <Separator />
 
         <SheetFooter className="flex flex-row justify-end gap-2 px-6 py-4">
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="submit" form="request-form" disabled={isSubmitting}>
-            {isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save changes" : "Create request")}
+            {isSubmitting
+              ? isEdit
+                ? "Saving…"
+                : "Creating…"
+              : isEdit
+                ? "Save changes"
+                : "Create request"}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -66,12 +66,14 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <Link href="/dashboard/requests">
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                     <IconCar className="size-4" />
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none">
                     <span className="font-semibold">Tap App</span>
-                    <span className="text-muted-foreground text-xs">Dashboard</span>
+                    <span className="text-xs text-muted-foreground">
+                      Dashboard
+                    </span>
                   </div>
                 </Link>
               </SidebarMenuButton>
@@ -107,14 +109,14 @@ export default function DashboardLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <div className="flex items-center gap-2 px-1 py-1.5">
-                <div className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-medium uppercase">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium uppercase">
                   {auth.user?.username?.slice(0, 2) ?? "U"}
                 </div>
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-sm font-medium">
                     {auth.user?.username}
                   </span>
-                  <span className="text-muted-foreground truncate text-xs">
+                  <span className="truncate text-xs text-muted-foreground">
                     {auth.user?.email}
                   </span>
                 </div>
@@ -140,7 +142,7 @@ export default function DashboardLayout({
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="flex items-center gap-1 text-sm">
-            <IconLayoutDashboard className="text-muted-foreground size-4" />
+            <IconLayoutDashboard className="size-4 text-muted-foreground" />
             <span className="text-muted-foreground">Dashboard</span>
             <span className="text-muted-foreground">/</span>
             <span className="font-medium capitalize">
@@ -151,10 +153,16 @@ export default function DashboardLayout({
             variant="ghost"
             size="icon"
             className="ml-auto"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            onClick={() =>
+              setTheme(resolvedTheme === "dark" ? "light" : "dark")
+            }
             title="Toggle theme"
           >
-            {resolvedTheme === "dark" ? <IconSun className="size-4" /> : <IconMoon className="size-4" />}
+            {resolvedTheme === "dark" ? (
+              <IconSun className="size-4" />
+            ) : (
+              <IconMoon className="size-4" />
+            )}
           </Button>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-6">{children}</div>

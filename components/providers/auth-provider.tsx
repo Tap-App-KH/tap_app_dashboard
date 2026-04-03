@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setJwt(res.jwt)
       setUser(res.user)
     },
-    [],
+    []
   )
 
   const logout = React.useCallback(() => {

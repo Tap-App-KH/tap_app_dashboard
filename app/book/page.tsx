@@ -11,7 +11,11 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Command,
   CommandEmpty,
@@ -73,7 +77,7 @@ function ToggleGroup<T extends string>({
             "flex h-full flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
             value === opt.value
               ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           {opt.label}
@@ -101,10 +105,10 @@ function CountryCodeCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="bg-muted h-9 justify-between gap-1 px-3 font-normal whitespace-nowrap"
+          className="h-9 justify-between gap-1 bg-muted px-3 font-normal whitespace-nowrap"
         >
           {selected ? `${selected.flag} ${selected.code}` : "+855"}
-          <IconChevronDown className="text-muted-foreground size-3 shrink-0" />
+          <IconChevronDown className="size-3 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-60 p-0" align="start">
@@ -122,8 +126,12 @@ function CountryCodeCombobox({
                     setOpen(false)
                   }}
                 >
-                  <span>{c.flag} {c.code}</span>
-                  <span className="text-muted-foreground ml-2 text-xs">{c.country}</span>
+                  <span>
+                    {c.flag} {c.code}
+                  </span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {c.country}
+                  </span>
                   {value === c.code && <IconCheck className="ml-auto size-4" />}
                 </CommandItem>
               ))}
@@ -146,7 +154,13 @@ export default function BookPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { hasPet: false, needsBabySeat: false, phoneCode: "+855", sex: "female" as const, nationality: "cambodian" as const },
+    defaultValues: {
+      hasPet: false,
+      needsBabySeat: false,
+      phoneCode: "+855",
+      sex: "female" as const,
+      nationality: "cambodian" as const,
+    },
   })
 
   const [submittedRefId, setSubmittedRefId] = useState<string | null>(null)
@@ -159,7 +173,10 @@ export default function BookPage() {
     try {
       const refBytes = new Uint8Array(5)
       crypto.getRandomValues(refBytes)
-      const refId = `TT-${Array.from(refBytes).map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase()}`
+      const refId = `TT-${Array.from(refBytes)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase()}`
 
       await strapiPost<StrapiResponse<Request>>("/api/requests", {
         data: {
@@ -199,20 +216,29 @@ export default function BookPage() {
 
   if (submittedRefId) {
     return (
-      <div className="min-h-svh bg-background flex items-center justify-center p-6 md:p-10">
+      <div className="flex min-h-svh items-center justify-center bg-background p-6 md:p-10">
         <div className="flex max-w-md flex-col items-center gap-5 text-center">
           <IconCircleCheckFilled className="size-16 text-green-500" />
           <div>
             <h1 className="text-2xl font-bold">Booking Confirmed!</h1>
-            <p className="text-muted-foreground mt-2 text-sm">
-              Your transfer request has been received. We&apos;ll be in touch shortly to confirm the details.
+            <p className="mt-2 text-sm text-muted-foreground">
+              Your transfer request has been received. We&apos;ll be in touch
+              shortly to confirm the details.
             </p>
           </div>
-          <div className="bg-muted w-full rounded-lg px-5 py-4">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">Booking Reference</p>
-            <p className="mt-1 font-mono text-lg font-semibold">{submittedRefId}</p>
+          <div className="w-full rounded-lg bg-muted px-5 py-4">
+            <p className="text-xs tracking-wide text-muted-foreground uppercase">
+              Booking Reference
+            </p>
+            <p className="mt-1 font-mono text-lg font-semibold">
+              {submittedRefId}
+            </p>
           </div>
-          <Button variant="outline" className="w-full" onClick={() => setSubmittedRefId(null)}>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => setSubmittedRefId(null)}
+          >
             Make Another Booking
           </Button>
         </div>
@@ -223,11 +249,14 @@ export default function BookPage() {
   return (
     <div className="min-h-svh bg-background p-6 md:p-10">
       <div className="mx-auto max-w-3xl">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-10">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-10"
+        >
           {/* Title */}
           <div>
             <h1 className="text-2xl font-bold">Book a Transfer</h1>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="mt-1 text-sm text-muted-foreground">
               Fill in your details and we&apos;ll arrange your transfer.
             </p>
           </div>
@@ -240,9 +269,15 @@ export default function BookPage() {
               {/* Full name */}
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="fullname">Full name</Label>
-                <Input id="fullname" placeholder="John Doe" {...register("fullname")} />
+                <Input
+                  id="fullname"
+                  placeholder="John Doe"
+                  {...register("fullname")}
+                />
                 {errors.fullname && (
-                  <p className="text-destructive text-xs">{errors.fullname.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.fullname.message}
+                  </p>
                 )}
               </div>
 
@@ -281,7 +316,11 @@ export default function BookPage() {
                   maxLength={2}
                   placeholder="e.g. 28"
                   onKeyDown={(e) => {
-                    if (!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|Tab/.test(e.key))
+                    if (
+                      !/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|Tab/.test(
+                        e.key
+                      )
+                    )
                       e.preventDefault()
                   }}
                   {...register("age")}
@@ -305,7 +344,9 @@ export default function BookPage() {
                   />
                 </div>
                 {errors.phone && (
-                  <p className="text-destructive text-xs">{errors.phone.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.phone.message}
+                  </p>
                 )}
               </div>
 
@@ -319,7 +360,9 @@ export default function BookPage() {
                   {...register("email")}
                 />
                 {errors.email && (
-                  <p className="text-destructive text-xs">{errors.email.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -327,7 +370,7 @@ export default function BookPage() {
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="whatsapp">WhatsApp</Label>
                 <div className="relative">
-                  <IconBrandWhatsapp className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <IconBrandWhatsapp className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="whatsapp"
                     placeholder="+1234567890"
@@ -341,7 +384,7 @@ export default function BookPage() {
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="telegram">Telegram</Label>
                 <div className="relative">
-                  <IconBrandTelegram className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <IconBrandTelegram className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="telegram"
                     placeholder="@username"
@@ -367,7 +410,9 @@ export default function BookPage() {
                   {...register("pickup")}
                 />
                 {errors.pickup && (
-                  <p className="text-destructive text-xs">{errors.pickup.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.pickup.message}
+                  </p>
                 )}
               </div>
 
@@ -380,7 +425,9 @@ export default function BookPage() {
                   {...register("dropoff")}
                 />
                 {errors.dropoff && (
-                  <p className="text-destructive text-xs">{errors.dropoff.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.dropoff.message}
+                  </p>
                 )}
               </div>
 
@@ -388,7 +435,7 @@ export default function BookPage() {
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="pickupDate">Pickup date</Label>
                 <div className="relative">
-                  <IconCalendar className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <IconCalendar className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="pickupDate"
                     type="date"
@@ -397,15 +444,19 @@ export default function BookPage() {
                   />
                 </div>
                 {errors.pickupDate && (
-                  <p className="text-destructive text-xs">{errors.pickupDate.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.pickupDate.message}
+                  </p>
                 )}
               </div>
 
               {/* Pickup time */}
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="pickupTime">Pickup time (Phnom Penh time)</Label>
+                <Label htmlFor="pickupTime">
+                  Pickup time (Phnom Penh time)
+                </Label>
                 <div className="relative">
-                  <IconClock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <IconClock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="pickupTime"
                     type="time"
@@ -414,7 +465,9 @@ export default function BookPage() {
                   />
                 </div>
                 {errors.pickupTime && (
-                  <p className="text-destructive text-xs">{errors.pickupTime.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.pickupTime.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -450,7 +503,10 @@ export default function BookPage() {
                     />
                   )}
                 />
-                <Label htmlFor="needsBabySeat" className="cursor-pointer font-normal">
+                <Label
+                  htmlFor="needsBabySeat"
+                  className="cursor-pointer font-normal"
+                >
                   I need a baby seat
                 </Label>
               </div>
@@ -468,7 +524,7 @@ export default function BookPage() {
             />
           </section>
 
-          <div className="bg-background sticky bottom-0 py-4">
+          <div className="sticky bottom-0 bg-background py-4">
             <Button type="submit" disabled={isSubmitting} className="w-full">
               {isSubmitting ? "Submitting…" : "Submit Booking Request"}
             </Button>

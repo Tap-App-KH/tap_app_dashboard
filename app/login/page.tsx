@@ -50,10 +50,15 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
-          <CardDescription>Enter your Strapi account credentials</CardDescription>
+          <CardDescription>
+            Enter your Strapi account credentials
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-4"
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="identifier">Email</Label>
               <Input
@@ -64,7 +69,9 @@ export default function LoginPage() {
                 {...register("identifier")}
               />
               {errors.identifier && (
-                <p className="text-destructive text-xs">{errors.identifier.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.identifier.message}
+                </p>
               )}
             </div>
 
@@ -77,12 +84,14 @@ export default function LoginPage() {
                 {...register("password")}
               />
               {errors.password && (
-                <p className="text-destructive text-xs">{errors.password.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
             {errors.root && (
-              <p className="text-destructive text-sm">{errors.root.message}</p>
+              <p className="text-sm text-destructive">{errors.root.message}</p>
             )}
 
             <Button type="submit" disabled={isSubmitting} className="w-full">
