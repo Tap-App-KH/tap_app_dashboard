@@ -40,6 +40,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Button } from "@/components/ui/button"
+import { DateRangeFilter } from "./date-range-filter"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,12 +74,29 @@ function tabFilter(tab: Tab): string {
   return ""
 }
 
-function useCount(filter: string, jwt: string | null) {
+function dateFilter(from: Date | undefined, to: Date | undefined): string {
+  let qs = ""
+  if (from) {
+    const y = from.getFullYear()
+    const m = String(from.getMonth() + 1).padStart(2, "0")
+    const d = String(from.getDate()).padStart(2, "0")
+    qs += `&filters[date][$gte]=${y}-${m}-${d}`
+  }
+  if (to) {
+    const y = to.getFullYear()
+    const m = String(to.getMonth() + 1).padStart(2, "0")
+    const d = String(to.getDate()).padStart(2, "0")
+    qs += `&filters[date][$lte]=${y}-${m}-${d}`
+  }
+  return qs
+}
+
+function useCount(filter: string, jwt: string | null, dateQs: string) {
   return useQuery({
-    queryKey: ["requests-count", filter],
+    queryKey: ["requests-count", filter, dateQs],
     queryFn: () =>
       strapiGet<StrapiResponse<Request[]>>(
-        `/api/requests?pagination[pageSize]=1&pagination[page]=1${filter}`,
+        `/api/requests?pagination[pageSize]=1&pagination[page]=1${filter}${dateQs}`,
         jwt ?? undefined
       ),
     enabled: !!jwt,
@@ -240,6 +258,11 @@ export default function RequestsPage() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<Tab>("all")
   const [page, setPage] = useState(1)
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), 1)
+  })
+  const [dateTo, setDateTo] = useState<Date | undefined>(() => new Date())
   const [copied, setCopied] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingRequest, setEditingRequest] = useState<Request | undefined>()
@@ -288,10 +311,11 @@ export default function RequestsPage() {
   }
 
   // Stat counts (lightweight — pageSize=1, just reads meta.pagination.total)
-  const { data: allStats, isLoading: statsLoading } = useCount("", auth.jwt)
-  const { data: acceptedStats } = useCount(tabFilter("accepted"), auth.jwt)
-  const { data: cancelledStats } = useCount(tabFilter("cancelled"), auth.jwt)
-  const { data: paidStats } = useCount("&filters[paid][$eq]=true", auth.jwt)
+  const df = dateFilter(dateFrom, dateTo)
+  const { data: allStats, isLoading: statsLoading } = useCount("", auth.jwt, df)
+  const { data: acceptedStats } = useCount(tabFilter("accepted"), auth.jwt, df)
+  const { data: cancelledStats } = useCount(tabFilter("cancelled"), auth.jwt, df)
+  const { data: paidStats } = useCount("&filters[paid][$eq]=true", auth.jwt, df)
 
   const total = allStats?.meta.pagination?.total ?? 0
   const acceptedTotal = acceptedStats?.meta.pagination?.total ?? 0
@@ -299,10 +323,10 @@ export default function RequestsPage() {
   const paidTotal = paidStats?.meta.pagination?.total ?? 0
   // Main paginated table query
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["requests", activeTab, page],
+    queryKey: ["requests", activeTab, page, df],
     queryFn: () =>
       strapiGet<StrapiResponse<Request[]>>(
-        `/api/requests?populate=*&sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${PAGE_SIZE}${tabFilter(activeTab)}`,
+        `/api/requests?populate=*&sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${PAGE_SIZE}${tabFilter(activeTab)}${df}`,
         auth.jwt ?? undefined
       ),
     enabled: !!auth.jwt,
@@ -317,6 +341,12 @@ export default function RequestsPage() {
     setPage(1)
   }
 
+  function handleDateChange(from: Date | undefined, to: Date | undefined) {
+    setDateFrom(from)
+    setDateTo(to)
+    setPage(1)
+  }
+
   const TABS: { value: Tab; label: string; count: number }[] = [
     { value: "all", label: "All", count: total },
     { value: "accepted", label: "Accepted", count: acceptedTotal },
@@ -327,9 +357,15 @@ export default function RequestsPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header row */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-lg font-semibold">Booking Requests</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangeFilter
+            from={dateFrom}
+            to={dateTo}
+            onChange={handleDateChange}
+          />
+          <div className="bg-border h-5 w-px" />
           <Button size="sm" onClick={openCreate} className="gap-2">
             <IconPlus className="size-4" />
             New Request
@@ -409,8 +445,8 @@ export default function RequestsPage() {
         </TabsList>
 
         {TABS.map((t) => (
-          <TabsContent key={t.value} value={t.value} className="mt-4">
-            <Card>
+          <TabsContent key={t.value} value={t.value} className="mt-4 min-w-0">
+            <Card className="overflow-hidden">
               <CardContent className="p-0">
                 {isError && (
                   <p className="px-6 py-12 text-center text-sm text-destructive">
@@ -438,6 +474,7 @@ export default function RequestsPage() {
 
                 {!isLoading && !isError && (
                   <>
+                    <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -446,7 +483,7 @@ export default function RequestsPage() {
                           <TableHead>Phone</TableHead>
                           <TableHead>From</TableHead>
                           <TableHead>To</TableHead>
-                          <TableHead>Price</TableHead>
+                          <TableHead className="text-right">Price</TableHead>
                           <TableHead>Pickup At</TableHead>
                           <TableHead>Submitted At</TableHead>
                           <TableHead>Status</TableHead>
@@ -500,7 +537,7 @@ export default function RequestsPage() {
                                     } | null
                                   )?.attributes?.name ?? "—"}
                                 </TableCell>
-                                <TableCell className="text-muted-foreground">
+                                <TableCell className="text-right text-muted-foreground">
                                   {a.transfer_details?.price != null
                                     ? `$${Number(a.transfer_details.price).toFixed(2)}`
                                     : "—"}
@@ -640,6 +677,7 @@ export default function RequestsPage() {
                         )}
                       </TableBody>
                     </Table>
+                    </div>
 
                     <div className="flex items-center justify-between border-t px-6 py-3">
                       <p className="shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">

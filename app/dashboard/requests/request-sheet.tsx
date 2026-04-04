@@ -333,10 +333,7 @@ function toFormValues(request: Request): FormValues {
     telegram: rd?.telegram ?? "",
     pickup: a.pickup_dropoff_details?.pickup ?? "",
     dropoff: a.pickup_dropoff_details?.dropoff ?? "",
-    pickupDate:
-      resolveField(a.pickup_dropoff_details?.pickupDate) === "—"
-        ? ""
-        : resolveField(a.pickup_dropoff_details?.pickupDate),
+    pickupDate: a.date ?? "",
     pickupTime:
       resolveField(a.pickup_dropoff_details?.pickupTime) === "—"
         ? ""
