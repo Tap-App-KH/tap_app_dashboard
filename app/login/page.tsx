@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -15,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { IconEye, IconEyeOff } from "@tabler/icons-react"
 
 const schema = z.object({
   identifier: z.string().min(1, "Email is required"),
@@ -26,6 +28,7 @@ type FormValues = z.infer<typeof schema>
 export default function LoginPage() {
   const auth = useAuth()
   const router = useRouter()
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -51,7 +54,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
           <CardDescription>
-            Enter your Strapi account credentials
+            Enter your Tap App admin account credentials
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -77,12 +80,29 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                {...register("password")}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  className="pr-9"
+                  {...register("password")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1/2 right-1 size-7 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <IconEyeOff className="size-4" />
+                  ) : (
+                    <IconEye className="size-4" />
+                  )}
+                </Button>
+              </div>
               {errors.password && (
                 <p className="text-xs text-destructive">
                   {errors.password.message}
