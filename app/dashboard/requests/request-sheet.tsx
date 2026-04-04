@@ -15,6 +15,7 @@ import {
   type Request,
   type StrapiResponse,
   type PlaceStrapiItem,
+  type Provider,
 } from "@/lib/strapi"
 import {
   Sheet,
@@ -76,6 +77,7 @@ const schema = z.object({
   transferType: z.enum(["private", "shared"]).optional(),
   fromPlaceId: z.string().optional(),
   toPlaceId: z.string().optional(),
+  driverId: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -168,6 +170,76 @@ function PlaceCombobox({
                 >
                   <span>{p.attributes.name}</span>
                   {String(p.id) === value && (
+                    <IconCheck className="ml-auto size-4 shrink-0" />
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function DriverCombobox({
+  value,
+  onChange,
+  drivers,
+}: {
+  value: string
+  onChange: (v: string) => void
+  drivers: Provider[]
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = drivers.find((d) => String(d.id) === value)
+
+  function driverLabel(d: Provider) {
+    const mainPhone = d.attributes.contacts?.find(
+      (c) => c.type === "phone" && c.main
+    )?.value
+    return mainPhone
+      ? `${d.attributes.fullname} - ${mainPhone}`
+      : d.attributes.fullname
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 w-full justify-between font-normal"
+        >
+          <span className="truncate text-left">
+            {selected ? driverLabel(selected) : "Select driver…"}
+          </span>
+          <IconChevronDown className="size-3 shrink-0 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[320px] p-0"
+        align="start"
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <Command>
+          <CommandInput placeholder="Search driver..." />
+          <CommandList>
+            <CommandEmpty>No driver found.</CommandEmpty>
+            <CommandGroup>
+              {drivers.map((d) => (
+                <CommandItem
+                  key={d.id}
+                  value={driverLabel(d)}
+                  onSelect={() => {
+                    onChange(String(d.id))
+                    setOpen(false)
+                  }}
+                >
+                  <span>{driverLabel(d)}</span>
+                  {String(d.id) === value && (
                     <IconCheck className="ml-auto size-4 shrink-0" />
                   )}
                 </CommandItem>
@@ -285,6 +357,15 @@ function toFormValues(request: Request): FormValues {
     toPlaceId: a.transfer_details?.to
       ? String((a.transfer_details.to as { id: string }).id)
       : "",
+    driverId: a.transfer_details?.provider
+      ? String(
+          (
+            a.transfer_details.provider as {
+              data: { id: string }
+            }
+          ).data.id
+        )
+      : "",
   }
 }
 
@@ -310,6 +391,7 @@ const EMPTY_FORM: FormValues = {
   transferType: "private",
   fromPlaceId: "",
   toPlaceId: "",
+  driverId: "",
 }
 
 export function RequestSheet({
@@ -332,6 +414,17 @@ export function RequestSheet({
   })
   const places = placesData?.data ?? []
 
+  const { data: driversData } = useQuery({
+    queryKey: ["drivers"],
+    queryFn: () =>
+      strapiGet<StrapiResponse<Provider[]>>(
+        "/api/providers?filters[provider_type][name][$eqi]=driver&populate[contacts]=*&fields[0]=fullname&fields[1]=verified&sort=fullname:asc",
+        auth.jwt ?? undefined
+      ),
+    staleTime: 5 * 60 * 1000,
+  })
+  const drivers = driversData?.data ?? []
+
   const {
     register,
     handleSubmit,
@@ -351,6 +444,7 @@ export function RequestSheet({
   const transferType = watch("transferType")
   const fromPlaceId = watch("fromPlaceId")
   const toPlaceId = watch("toPlaceId")
+  const driverId = watch("driverId")
 
   useEffect(() => {
     if (open) {
@@ -406,6 +500,22 @@ export function RequestSheet({
       }
     }
 
+    function buildProviderPayload(id: string | undefined) {
+      if (!id) return null
+      const driver = drivers.find((d) => String(d.id) === id)
+      if (!driver) return null
+      return {
+        data: {
+          id: String(driver.id),
+          __typename: "ProviderEntity",
+          attributes: {
+            fullname: driver.attributes.fullname,
+            verified: driver.attributes.verified ?? false,
+          },
+        },
+      }
+    }
+
     const body = {
       data: {
         ...(!isEdit && { ref_id: refId, accepted: true }),
@@ -416,6 +526,7 @@ export function RequestSheet({
           type: values.transferType ?? null,
           from: buildPlacePayload(values.fromPlaceId),
           to: buildPlacePayload(values.toPlaceId),
+          provider: buildProviderPayload(values.driverId),
         },
         requester_details: {
           fullname: values.fullname,
@@ -587,6 +698,15 @@ export function RequestSheet({
                   { label: "Private", value: "private" },
                   { label: "Shared", value: "shared" },
                 ]}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Driver</Label>
+              <DriverCombobox
+                value={driverId ?? ""}
+                onChange={(v) => setValue("driverId", v)}
+                drivers={drivers}
               />
             </div>
           </div>

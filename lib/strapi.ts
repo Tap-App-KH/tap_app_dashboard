@@ -115,6 +115,7 @@ export interface TransferDetails {
   type?: "private" | "shared" | null
   from?: Record<string, unknown> | null
   to?: Record<string, unknown> | null
+  provider?: Record<string, unknown> | null
 }
 
 export interface RequestAttributes {
