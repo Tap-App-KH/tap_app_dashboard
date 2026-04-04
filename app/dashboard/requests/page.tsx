@@ -487,10 +487,18 @@ export default function RequestsPage() {
                                     .join("") || "—"}
                                 </TableCell>
                                 <TableCell className="max-w-40 truncate text-muted-foreground">
-                                  {(a.transfer_details?.from as { attributes?: { name?: string } } | null)?.attributes?.name ?? "—"}
+                                  {(
+                                    a.transfer_details?.from as {
+                                      attributes?: { name?: string }
+                                    } | null
+                                  )?.attributes?.name ?? "—"}
                                 </TableCell>
                                 <TableCell className="max-w-40 truncate text-muted-foreground">
-                                  {(a.transfer_details?.to as { attributes?: { name?: string } } | null)?.attributes?.name ?? "—"}
+                                  {(
+                                    a.transfer_details?.to as {
+                                      attributes?: { name?: string }
+                                    } | null
+                                  )?.attributes?.name ?? "—"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
                                   {a.transfer_details?.price != null

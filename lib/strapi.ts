@@ -73,6 +73,42 @@ export interface PlaceStrapiItem {
   attributes: PlaceStrapiAttributes
 }
 
+export interface ContactComponent {
+  id?: number
+  type: "phone" | "email"
+  value: string
+  main: boolean
+  verified: boolean
+}
+
+export interface ProviderTypeAttributes {
+  name: string
+}
+
+export interface ProviderTypeItem {
+  id: number
+  attributes: ProviderTypeAttributes
+}
+
+export interface ProviderAttributes {
+  fullname: string
+  sex: "m" | "f" | null
+  confirmed: boolean | null
+  blocked: boolean | null
+  active: boolean | null
+  working: boolean | null
+  verified: boolean | null
+  provider_type: { data: ProviderTypeItem | null }
+  contacts: ContactComponent[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Provider {
+  id: number
+  attributes: ProviderAttributes
+}
+
 export interface TransferDetails {
   price?: number | null
   costPrice?: number | null

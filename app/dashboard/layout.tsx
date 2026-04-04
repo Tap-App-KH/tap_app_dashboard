@@ -30,6 +30,7 @@ import {
   IconLogout,
   IconSun,
   IconMoon,
+  IconUsers,
 } from "@tabler/icons-react"
 
 const navItems = [
@@ -37,6 +38,11 @@ const navItems = [
     label: "Requests",
     href: "/dashboard/requests",
     icon: IconCalendarEvent,
+  },
+  {
+    label: "Providers",
+    href: "/dashboard/providers",
+    icon: IconUsers,
   },
 ]
 
