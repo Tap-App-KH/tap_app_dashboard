@@ -57,10 +57,28 @@ export function resolveField(
   return field.value || field.label || "—"
 }
 
+export interface PlaceStrapiAttributes {
+  name: string
+  slug: string
+  country: {
+    data: {
+      id: number
+      attributes: { name: string }
+    } | null
+  }
+}
+
+export interface PlaceStrapiItem {
+  id: number
+  attributes: PlaceStrapiAttributes
+}
+
 export interface TransferDetails {
   price?: number | null
   costPrice?: number | null
   type?: "private" | "shared" | null
+  from?: Record<string, unknown> | null
+  to?: Record<string, unknown> | null
 }
 
 export interface RequestAttributes {

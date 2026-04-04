@@ -7,9 +7,7 @@ export interface CountryCode {
 /** Converts a flag emoji (e.g. "🇰🇭") to its ISO 2-letter code (e.g. "kh"). */
 export function flagToIso(flag: string): string {
   return [...flag]
-    .map((c) =>
-      String.fromCharCode((c.codePointAt(0) ?? 0) - 0x1f1e6 + 65)
-    )
+    .map((c) => String.fromCharCode((c.codePointAt(0) ?? 0) - 0x1f1e6 + 65))
     .join("")
     .toLowerCase()
 }

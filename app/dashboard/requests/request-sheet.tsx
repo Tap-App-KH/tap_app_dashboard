@@ -5,13 +5,16 @@ import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/use-auth"
 import {
+  strapiGet,
   strapiPost,
   strapiPut,
   resolveField,
   type Request,
   type StrapiResponse,
+  type PlaceStrapiItem,
 } from "@/lib/strapi"
 import {
   Sheet,
@@ -71,6 +74,8 @@ const schema = z.object({
   costPrice: z.string().optional(),
   price: z.string().min(1, "Selling price is required"),
   transferType: z.enum(["private", "shared"]).optional(),
+  fromPlaceId: z.string().optional(),
+  toPlaceId: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -109,6 +114,69 @@ function ToggleGroup<T extends string>({
         </button>
       ))}
     </div>
+  )
+}
+
+function PlaceCombobox({
+  value,
+  onChange,
+  places,
+  placeholder = "Select location…",
+}: {
+  value: string
+  onChange: (v: string) => void
+  places: PlaceStrapiItem[]
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = places.find((p) => String(p.id) === value)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 w-full justify-between font-normal"
+        >
+          <span className="truncate text-left">
+            {selected ? selected.attributes.name : placeholder}
+          </span>
+          <IconChevronDown className="size-3 shrink-0 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[320px] p-0"
+        align="start"
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <Command>
+          <CommandInput placeholder="Search place..." />
+          <CommandList>
+            <CommandEmpty>No place found.</CommandEmpty>
+            <CommandGroup>
+              {places.map((p) => (
+                <CommandItem
+                  key={p.id}
+                  value={p.attributes.name}
+                  onSelect={() => {
+                    onChange(String(p.id))
+                    setOpen(false)
+                  }}
+                >
+                  <span>{p.attributes.name}</span>
+                  {String(p.id) === value && (
+                    <IconCheck className="ml-auto size-4 shrink-0" />
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -164,7 +232,9 @@ function CountryCodeCombobox({
                     <span className="ml-2 truncate text-xs text-muted-foreground">
                       {c.country}
                     </span>
-                    {value === iso && <IconCheck className="ml-auto shrink-0 size-4" />}
+                    {value === iso && (
+                      <IconCheck className="ml-auto size-4 shrink-0" />
+                    )}
                   </CommandItem>
                 )
               })}
@@ -202,9 +272,19 @@ function toFormValues(request: Request): FormValues {
     hasPet: rd?.hasPet ?? false,
     needsBabySeat: rd?.needsBabySeat ?? false,
     wishes: rd?.wishes ?? "",
-    costPrice: a.transfer_details?.costPrice != null ? String(a.transfer_details.costPrice) : "",
-    price: a.transfer_details?.price != null ? String(a.transfer_details.price) : "",
+    costPrice:
+      a.transfer_details?.costPrice != null
+        ? String(a.transfer_details.costPrice)
+        : "",
+    price:
+      a.transfer_details?.price != null ? String(a.transfer_details.price) : "",
     transferType: a.transfer_details?.type ?? undefined,
+    fromPlaceId: a.transfer_details?.from
+      ? String((a.transfer_details.from as { id: string }).id)
+      : "",
+    toPlaceId: a.transfer_details?.to
+      ? String((a.transfer_details.to as { id: string }).id)
+      : "",
   }
 }
 
@@ -228,6 +308,8 @@ const EMPTY_FORM: FormValues = {
   costPrice: "",
   price: "",
   transferType: "private",
+  fromPlaceId: "",
+  toPlaceId: "",
 }
 
 export function RequestSheet({
@@ -238,6 +320,17 @@ export function RequestSheet({
 }: RequestSheetProps) {
   const auth = useAuth()
   const isEdit = !!request
+
+  const { data: placesData } = useQuery({
+    queryKey: ["places"],
+    queryFn: () =>
+      strapiGet<StrapiResponse<PlaceStrapiItem[]>>(
+        "/api/places?populate[country][fields][0]=name&fields[0]=name&fields[1]=slug&sort=name:asc",
+        auth.jwt ?? undefined
+      ),
+    staleTime: 5 * 60 * 1000,
+  })
+  const places = placesData?.data ?? []
 
   const {
     register,
@@ -256,6 +349,8 @@ export function RequestSheet({
   const nationality = watch("nationality")
   const phoneCode = watch("phoneCode")
   const transferType = watch("transferType")
+  const fromPlaceId = watch("fromPlaceId")
+  const toPlaceId = watch("toPlaceId")
 
   useEffect(() => {
     if (open) {
@@ -282,6 +377,35 @@ export function RequestSheet({
         }
       : undefined
 
+    function buildPlacePayload(placeId: string | undefined) {
+      if (!placeId) return null
+      const place = places.find((p) => String(p.id) === placeId)
+      if (!place) return null
+      const countryData = place.attributes.country?.data
+      return {
+        id: String(place.id),
+        __typename: "PlaceEntity",
+        attributes: {
+          name: place.attributes.name,
+          slug: place.attributes.slug,
+          __typename: "Place",
+          country: {
+            __typename: "CountryEntityResponse",
+            data: countryData
+              ? {
+                  id: String(countryData.id),
+                  __typename: "CountryEntity",
+                  attributes: {
+                    name: countryData.attributes.name,
+                    __typename: "Country",
+                  },
+                }
+              : null,
+          },
+        },
+      }
+    }
+
     const body = {
       data: {
         ...(!isEdit && { ref_id: refId, accepted: true }),
@@ -290,6 +414,8 @@ export function RequestSheet({
           costPrice: values.costPrice ? Number(values.costPrice) : null,
           price: values.price ? Number(values.price) : null,
           type: values.transferType ?? null,
+          from: buildPlacePayload(values.fromPlaceId),
+          to: buildPlacePayload(values.toPlaceId),
         },
         requester_details: {
           fullname: values.fullname,
@@ -369,6 +495,26 @@ export function RequestSheet({
           <div className="flex flex-col gap-4">
             <h3 className="text-sm font-medium">Transfer Details</h3>
 
+            <div className="flex flex-col gap-1.5">
+              <Label>From</Label>
+              <PlaceCombobox
+                value={fromPlaceId ?? ""}
+                onChange={(v) => setValue("fromPlaceId", v)}
+                places={places}
+                placeholder="Select origin…"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>To</Label>
+              <PlaceCombobox
+                value={toPlaceId ?? ""}
+                onChange={(v) => setValue("toPlaceId", v)}
+                places={places}
+                placeholder="Select destination…"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="costPrice">Cost Price</Label>
@@ -391,8 +537,7 @@ export function RequestSheet({
                     }}
                     onBlur={(e) => {
                       const val = parseFloat(e.target.value)
-                      if (!isNaN(val))
-                        setValue("costPrice", val.toFixed(2))
+                      if (!isNaN(val)) setValue("costPrice", val.toFixed(2))
                     }}
                     {...register("costPrice")}
                   />
@@ -420,8 +565,7 @@ export function RequestSheet({
                     }}
                     onBlur={(e) => {
                       const val = parseFloat(e.target.value)
-                      if (!isNaN(val))
-                        setValue("price", val.toFixed(2))
+                      if (!isNaN(val)) setValue("price", val.toFixed(2))
                     }}
                     {...register("price")}
                   />

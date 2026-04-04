@@ -67,7 +67,13 @@ export default function DashboardLayout({
               <SidebarMenuButton size="lg" asChild>
                 <Link href="/dashboard/requests">
                   <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
-                    <Image src="/logo.png" alt="Tap App" width={32} height={32} className="size-8 object-contain" />
+                    <Image
+                      src="/logo.png"
+                      alt="Tap App"
+                      width={32}
+                      height={32}
+                      className="size-8 object-contain"
+                    />
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none">
                     <span className="font-semibold">Tap App</span>
@@ -140,7 +146,7 @@ export default function DashboardLayout({
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4 my-auto" />
+          <Separator orientation="vertical" className="my-auto mr-2 h-4" />
           <div className="flex items-center gap-1 text-sm">
             <IconLayoutDashboard className="size-4 text-muted-foreground" />
             <span className="text-muted-foreground">Dashboard</span>

@@ -269,7 +269,9 @@ export default function RequestsPage() {
 
   async function updateStatus(
     req: Request,
-    patch: Partial<Pick<Request["attributes"], "accepted" | "paid" | "cancelled">>,
+    patch: Partial<
+      Pick<Request["attributes"], "accepted" | "paid" | "cancelled">
+    >,
     label: string
   ) {
     try {
@@ -476,9 +478,12 @@ export default function RequestsPage() {
                                   {a.requester_details?.fullname ?? "—"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {[a.requester_details?.phoneCode?.value, a.requester_details?.phone]
-  .filter(Boolean)
-  .join("") || "—"}
+                                  {[
+                                    a.requester_details?.phoneCode?.value,
+                                    a.requester_details?.phone,
+                                  ]
+                                    .filter(Boolean)
+                                    .join("") || "—"}
                                 </TableCell>
                                 <TableCell className="max-w-40 truncate text-muted-foreground">
                                   {a.pickup_dropoff_details?.pickup ?? "—"}
@@ -489,10 +494,16 @@ export default function RequestsPage() {
                                 <TableCell className="text-muted-foreground">
                                   {(() => {
                                     const date =
-                                      resolveField(a.pickup_dropoff_details?.pickupDate) !== "—"
-                                        ? resolveField(a.pickup_dropoff_details?.pickupDate)
+                                      resolveField(
+                                        a.pickup_dropoff_details?.pickupDate
+                                      ) !== "—"
+                                        ? resolveField(
+                                            a.pickup_dropoff_details?.pickupDate
+                                          )
                                         : (a.date ?? "")
-                                    const time = resolveField(a.pickup_dropoff_details?.pickupTime)
+                                    const time = resolveField(
+                                      a.pickup_dropoff_details?.pickupTime
+                                    )
                                     if (!date) return "—"
                                     return time !== "—"
                                       ? formatDateTime(date, time)
@@ -500,40 +511,56 @@ export default function RequestsPage() {
                                   })()}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {a.createdAt ? formatDateTime(a.createdAt) : "—"}
+                                  {a.createdAt
+                                    ? formatDateTime(a.createdAt)
+                                    : "—"}
                                 </TableCell>
                                 <TableCell>
                                   <StatusBadge attrs={a} />
                                 </TableCell>
-                                <TableCell className="pr-6" onClick={(e) => e.stopPropagation()}>
+                                <TableCell
+                                  className="pr-6"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="icon-sm">
                                         <IconDotsVertical className="size-4" />
                                       </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-44">
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="w-44"
+                                    >
                                       {!a.accepted && (
                                         <DropdownMenuItem
                                           className="whitespace-nowrap"
                                           disabled={!!a.cancelled}
                                           onClick={() =>
-                                            updateStatus(req, { accepted: true }, "Marked as accepted")
+                                            updateStatus(
+                                              req,
+                                              { accepted: true },
+                                              "Marked as accepted"
+                                            )
                                           }
                                         >
                                           <IconCircleCheck className="size-4" />
                                           Mark as Accepted
                                         </DropdownMenuItem>
                                       )}
-                                      {!a.accepted && (
-                                        <DropdownMenuSeparator />
-                                      )}
+                                      {!a.accepted && <DropdownMenuSeparator />}
                                       {!a.paid ? (
                                         <DropdownMenuItem
                                           className="whitespace-nowrap"
-                                          disabled={!a.accepted || !!a.cancelled}
+                                          disabled={
+                                            !a.accepted || !!a.cancelled
+                                          }
                                           onClick={() =>
-                                            updateStatus(req, { paid: true }, "Marked as paid")
+                                            updateStatus(
+                                              req,
+                                              { paid: true },
+                                              "Marked as paid"
+                                            )
                                           }
                                         >
                                           <IconCreditCard className="size-4" />
@@ -544,7 +571,11 @@ export default function RequestsPage() {
                                           className="whitespace-nowrap"
                                           disabled={!!a.cancelled}
                                           onClick={() =>
-                                            updateStatus(req, { paid: false }, "Marked as refunded")
+                                            updateStatus(
+                                              req,
+                                              { paid: false },
+                                              "Marked as refunded"
+                                            )
                                           }
                                         >
                                           <IconReceiptRefund className="size-4" />
@@ -559,7 +590,11 @@ export default function RequestsPage() {
                                           onClick={() =>
                                             updateStatus(
                                               req,
-                                              { cancelled: true, accepted: false, paid: false },
+                                              {
+                                                cancelled: true,
+                                                accepted: false,
+                                                paid: false,
+                                              },
                                               "Request cancelled"
                                             )
                                           }
@@ -571,7 +606,11 @@ export default function RequestsPage() {
                                         <DropdownMenuItem
                                           className="whitespace-nowrap"
                                           onClick={() =>
-                                            updateStatus(req, { cancelled: false }, "Cancellation removed")
+                                            updateStatus(
+                                              req,
+                                              { cancelled: false },
+                                              "Cancellation removed"
+                                            )
                                           }
                                         >
                                           <IconArrowBackUp className="size-4" />

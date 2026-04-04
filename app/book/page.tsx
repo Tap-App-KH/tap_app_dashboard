@@ -135,7 +135,9 @@ function CountryCodeCombobox({
                     <span className="ml-2 truncate text-xs text-muted-foreground">
                       {c.country}
                     </span>
-                    {value === iso && <IconCheck className="ml-auto shrink-0 size-4" />}
+                    {value === iso && (
+                      <IconCheck className="ml-auto size-4 shrink-0" />
+                    )}
                   </CommandItem>
                 )
               })}
