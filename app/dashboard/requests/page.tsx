@@ -401,7 +401,7 @@ export default function RequestsPage() {
           {TABS.map((t) => (
             <TabsTrigger key={t.value} value={t.value}>
               {t.label}
-              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground tabular-nums">
+              <span className="ml-1.5 rounded-full bg-foreground/10 px-1.5 py-0.5 text-xs text-muted-foreground tabular-nums">
                 {t.count}
               </span>
             </TabsTrigger>
@@ -444,8 +444,9 @@ export default function RequestsPage() {
                           <TableHead className="w-36 pl-6">Ref ID</TableHead>
                           <TableHead>Passenger</TableHead>
                           <TableHead>Phone</TableHead>
-                          <TableHead>Pickup</TableHead>
-                          <TableHead>Dropoff</TableHead>
+                          <TableHead>From</TableHead>
+                          <TableHead>To</TableHead>
+                          <TableHead>Price</TableHead>
                           <TableHead>Pickup At</TableHead>
                           <TableHead>Submitted At</TableHead>
                           <TableHead>Status</TableHead>
@@ -456,7 +457,7 @@ export default function RequestsPage() {
                         {requests.length === 0 ? (
                           <TableRow>
                             <TableCell
-                              colSpan={10}
+                              colSpan={11}
                               className="py-12 text-center text-muted-foreground"
                             >
                               No requests in this category
@@ -486,10 +487,15 @@ export default function RequestsPage() {
                                     .join("") || "—"}
                                 </TableCell>
                                 <TableCell className="max-w-40 truncate text-muted-foreground">
-                                  {a.pickup_dropoff_details?.pickup ?? "—"}
+                                  {(a.transfer_details?.from as { attributes?: { name?: string } } | null)?.attributes?.name ?? "—"}
                                 </TableCell>
                                 <TableCell className="max-w-40 truncate text-muted-foreground">
-                                  {a.pickup_dropoff_details?.dropoff ?? "—"}
+                                  {(a.transfer_details?.to as { attributes?: { name?: string } } | null)?.attributes?.name ?? "—"}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {a.transfer_details?.price != null
+                                    ? `$${Number(a.transfer_details.price).toFixed(2)}`
+                                    : "—"}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
                                   {(() => {
