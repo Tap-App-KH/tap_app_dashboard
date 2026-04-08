@@ -318,7 +318,7 @@ function CountryCodeCombobox({
   )
 }
 
-function toFormValues(request: Request): FormValues {
+export function toFormValues(request: Request): FormValues {
   const a = request.attributes
   const rd = a.requester_details
   return {

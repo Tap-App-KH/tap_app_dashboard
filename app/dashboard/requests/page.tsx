@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/use-auth"
 import { RequestSheet } from "./request-sheet"
+import { tabFilter, dateFilter, prevDateFilter, calcTrend, type Tab } from "./utils"
 import {
   strapiGet,
   strapiPut,
@@ -51,6 +52,8 @@ import {
 import { toast } from "sonner"
 import {
   IconArrowUpRight,
+  IconArrowDownRight,
+  IconMinus,
   IconArrowBackUp,
   IconCalendarEvent,
   IconCircleCheck,
@@ -65,33 +68,12 @@ import {
 
 const PAGE_SIZE = 20
 
-type Tab = "all" | "accepted" | "paid" | "cancelled"
-
-function tabFilter(tab: Tab): string {
-  if (tab === "accepted") return "&filters[accepted][$eq]=true"
-  if (tab === "cancelled") return "&filters[cancelled][$eq]=true"
-  if (tab === "paid") return "&filters[paid][$eq]=true"
-  return ""
-}
-
-function dateFilter(from: Date | undefined, to: Date | undefined): string {
-  let qs = ""
-  if (from) {
-    const y = from.getFullYear()
-    const m = String(from.getMonth() + 1).padStart(2, "0")
-    const d = String(from.getDate()).padStart(2, "0")
-    qs += `&filters[date][$gte]=${y}-${m}-${d}`
-  }
-  if (to) {
-    const y = to.getFullYear()
-    const m = String(to.getMonth() + 1).padStart(2, "0")
-    const d = String(to.getDate()).padStart(2, "0")
-    qs += `&filters[date][$lte]=${y}-${m}-${d}`
-  }
-  return qs
-}
-
-function useCount(filter: string, jwt: string | null, dateQs: string) {
+function useCount(
+  filter: string,
+  jwt: string | null,
+  dateQs: string,
+  skip = false
+) {
   return useQuery({
     queryKey: ["requests-count", filter, dateQs],
     queryFn: () =>
@@ -99,7 +81,7 @@ function useCount(filter: string, jwt: string | null, dateQs: string) {
         `/api/requests?pagination[pageSize]=1&pagination[page]=1${filter}${dateQs}`,
         jwt ?? undefined
       ),
-    enabled: !!jwt,
+    enabled: !!jwt && !skip,
     staleTime: 30_000,
   })
 }
@@ -125,10 +107,53 @@ function StatusBadge({ attrs }: { attrs: Request["attributes"] }) {
   )
 }
 
+function TrendBadge({
+  current,
+  prev,
+}: {
+  current: number
+  prev: number | undefined
+}) {
+  const { pct, direction } = calcTrend(current, prev)
+
+  if (direction === "none") return null
+
+  if (direction === "new")
+    return (
+      <span className="flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-400">
+        <IconArrowUpRight className="size-3" />
+        New
+      </span>
+    )
+
+  if (direction === "flat")
+    return (
+      <span className="flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        <IconMinus className="size-3" />
+        0%
+      </span>
+    )
+
+  if (direction === "up")
+    return (
+      <span className="flex items-center gap-0.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-400">
+        <IconArrowUpRight className="size-3" />
+        {pct}%
+      </span>
+    )
+
+  return (
+    <span className="flex items-center gap-0.5 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-400">
+      <IconArrowDownRight className="size-3" />
+      {Math.abs(pct!)}%
+    </span>
+  )
+}
+
 function StatCard({
   title,
   value,
-  total,
+  prev,
   description,
   detail,
   icon: Icon,
@@ -136,21 +161,17 @@ function StatCard({
 }: {
   title: string
   value: number
-  total: number
+  prev: number | undefined
   description: string
   detail: string
   icon: React.ElementType
   loading: boolean
 }) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <span className="flex items-center gap-0.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-400">
-          <IconArrowUpRight className="size-3" />
-          {pct}%
-        </span>
+        <TrendBadge current={value} prev={prev} />
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
         {loading ? (
@@ -312,15 +333,28 @@ export default function RequestsPage() {
 
   // Stat counts (lightweight — pageSize=1, just reads meta.pagination.total)
   const df = dateFilter(dateFrom, dateTo)
+  const pdf = prevDateFilter(dateFrom, dateTo)
   const { data: allStats, isLoading: statsLoading } = useCount("", auth.jwt, df)
   const { data: acceptedStats } = useCount(tabFilter("accepted"), auth.jwt, df)
   const { data: cancelledStats } = useCount(tabFilter("cancelled"), auth.jwt, df)
   const { data: paidStats } = useCount("&filters[paid][$eq]=true", auth.jwt, df)
 
+  // Previous period counts for trend badges (only when a date filter is active)
+  const hasPdf = pdf !== ""
+  const { data: prevAllStats } = useCount("", auth.jwt, pdf, !hasPdf)
+  const { data: prevAcceptedStats } = useCount(tabFilter("accepted"), auth.jwt, pdf, !hasPdf)
+  const { data: prevCancelledStats } = useCount(tabFilter("cancelled"), auth.jwt, pdf, !hasPdf)
+  const { data: prevPaidStats } = useCount("&filters[paid][$eq]=true", auth.jwt, pdf, !hasPdf)
+
   const total = allStats?.meta.pagination?.total ?? 0
   const acceptedTotal = acceptedStats?.meta.pagination?.total ?? 0
   const cancelledTotal = cancelledStats?.meta.pagination?.total ?? 0
   const paidTotal = paidStats?.meta.pagination?.total ?? 0
+
+  const prevTotal = hasPdf ? (prevAllStats?.meta.pagination?.total ?? 0) : undefined
+  const prevAcceptedTotal = hasPdf ? (prevAcceptedStats?.meta.pagination?.total ?? 0) : undefined
+  const prevCancelledTotal = hasPdf ? (prevCancelledStats?.meta.pagination?.total ?? 0) : undefined
+  const prevPaidTotal = hasPdf ? (prevPaidStats?.meta.pagination?.total ?? 0) : undefined
   // Main paginated table query
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["requests", activeTab, page, df],
@@ -396,7 +430,7 @@ export default function RequestsPage() {
         <StatCard
           title="Total Requests"
           value={total}
-          total={total}
+          prev={prevTotal}
           description="All booking requests"
           detail="Across all statuses"
           icon={IconCalendarEvent}
@@ -405,7 +439,7 @@ export default function RequestsPage() {
         <StatCard
           title="Accepted"
           value={acceptedTotal}
-          total={total}
+          prev={prevAcceptedTotal}
           description="Confirmed bookings"
           detail="Ready for transfer"
           icon={IconCircleCheck}
@@ -414,7 +448,7 @@ export default function RequestsPage() {
         <StatCard
           title="Paid"
           value={paidTotal}
-          total={total}
+          prev={prevPaidTotal}
           description="Completed payments"
           detail="Revenue confirmed"
           icon={IconCreditCard}
@@ -423,7 +457,7 @@ export default function RequestsPage() {
         <StatCard
           title="Cancelled"
           value={cancelledTotal}
-          total={total}
+          prev={prevCancelledTotal}
           description="Cancelled requests"
           detail="No action needed"
           icon={IconCircleX}
