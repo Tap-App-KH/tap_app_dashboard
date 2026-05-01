@@ -42,7 +42,9 @@ test.describe("Login flow", () => {
         contentType: "application/json",
         body: JSON.stringify({
           data: [],
-          meta: { pagination: { page: 1, pageSize: 20, pageCount: 1, total: 0 } },
+          meta: {
+            pagination: { page: 1, pageSize: 20, pageCount: 1, total: 0 },
+          },
         }),
       })
     })
@@ -78,12 +80,12 @@ test.describe("Login flow", () => {
     await page.getByLabel("Password").fill("badpassword")
     await page.getByRole("button", { name: "Sign in" }).click()
 
-    await expect(
-      page.getByText("Invalid identifier or password")
-    ).toBeVisible()
+    await expect(page.getByText("Invalid identifier or password")).toBeVisible()
   })
 
-  test("shows validation errors for empty form submission", async ({ page }) => {
+  test("shows validation errors for empty form submission", async ({
+    page,
+  }) => {
     await page.goto("/login")
 
     await page.getByRole("button", { name: "Sign in" }).click()
@@ -109,6 +111,8 @@ test.describe("Login flow", () => {
     await page.getByLabel("Password").fill("password123")
     await page.getByRole("button", { name: "Sign in" }).click()
 
-    await expect(page.getByRole("button", { name: "Signing in…" })).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Signing in…" })
+    ).toBeVisible()
   })
 })

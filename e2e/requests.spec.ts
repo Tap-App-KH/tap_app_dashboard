@@ -41,7 +41,10 @@ const MOCK_REQUESTS = [
         costPrice: 40,
         price: 55,
         type: "private",
-        from: { id: "1", attributes: { name: "Phnom Penh", slug: "phnom-penh" } },
+        from: {
+          id: "1",
+          attributes: { name: "Phnom Penh", slug: "phnom-penh" },
+        },
         to: { id: "2", attributes: { name: "Siem Reap", slug: "siem-reap" } },
         provider: null,
       },

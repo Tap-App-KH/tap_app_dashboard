@@ -43,16 +43,12 @@ describe("dateFilter", () => {
 
   it("returns only gte filter when only from is provided", () => {
     const from = new Date(2024, 0, 15) // Jan 15 2024
-    expect(dateFilter(from, undefined)).toBe(
-      "&filters[date][$gte]=2024-01-15"
-    )
+    expect(dateFilter(from, undefined)).toBe("&filters[date][$gte]=2024-01-15")
   })
 
   it("returns only lte filter when only to is provided", () => {
     const to = new Date(2024, 11, 31) // Dec 31 2024
-    expect(dateFilter(undefined, to)).toBe(
-      "&filters[date][$lte]=2024-12-31"
-    )
+    expect(dateFilter(undefined, to)).toBe("&filters[date][$lte]=2024-12-31")
   })
 
   it("returns both gte and lte filters when both dates are provided", () => {
@@ -87,9 +83,7 @@ describe("dateFilter", () => {
 
   it("handles leap year Feb 29 correctly", () => {
     const from = new Date(2024, 1, 29) // Feb 29 2024 (leap year)
-    expect(dateFilter(from, undefined)).toBe(
-      "&filters[date][$gte]=2024-02-29"
-    )
+    expect(dateFilter(from, undefined)).toBe("&filters[date][$gte]=2024-02-29")
   })
 
   it("preserves gte before lte in the output string", () => {

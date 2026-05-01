@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, vi, afterEach } from "vitest"
 import {
   strapiLogin,
   strapiGet,
@@ -6,8 +6,6 @@ import {
   strapiPut,
   resolveField,
   type AuthResponse,
-  type StrapiResponse,
-  type Request,
 } from "./strapi"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -87,7 +85,11 @@ describe("strapiLogin", () => {
   it("throws an error with Strapi error message when response is not ok", async () => {
     const errorBody = {
       data: null,
-      error: { status: 400, name: "ValidationError", message: "Invalid credentials" },
+      error: {
+        status: 400,
+        name: "ValidationError",
+        message: "Invalid credentials",
+      },
     }
     vi.stubGlobal("fetch", mockFetch(errorBody, false, 400))
 
@@ -97,7 +99,10 @@ describe("strapiLogin", () => {
   })
 
   it("falls back to HTTP status message when error has no message", async () => {
-    const errorBody = { data: null, error: { status: 500, name: "InternalError" } }
+    const errorBody = {
+      data: null,
+      error: { status: 500, name: "InternalError" },
+    }
     vi.stubGlobal("fetch", mockFetch(errorBody, false, 500))
 
     await expect(strapiLogin("a@b.com", "pw")).rejects.toThrow("HTTP 500")
@@ -144,7 +149,11 @@ describe("strapiGet", () => {
   it("throws on error response", async () => {
     const errorBody = {
       data: null,
-      error: { status: 401, name: "UnauthorizedError", message: "Missing or invalid credentials" },
+      error: {
+        status: 401,
+        name: "UnauthorizedError",
+        message: "Missing or invalid credentials",
+      },
     }
     vi.stubGlobal("fetch", mockFetch(errorBody, false, 401))
 
@@ -166,7 +175,11 @@ describe("strapiPost", () => {
     const responsePayload = { data: { id: 42 }, meta: {} }
     vi.stubGlobal("fetch", mockFetch(responsePayload))
 
-    await strapiPost<typeof responsePayload>("/api/requests", requestBody, "jwt-token")
+    await strapiPost<typeof responsePayload>(
+      "/api/requests",
+      requestBody,
+      "jwt-token"
+    )
 
     const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(url).toBe(`${STRAPI_URL}/api/requests`)
@@ -192,7 +205,9 @@ describe("strapiPost", () => {
     }
     vi.stubGlobal("fetch", mockFetch(errorBody, false, 422))
 
-    await expect(strapiPost("/api/requests", {}, "jwt")).rejects.toThrow("Invalid data")
+    await expect(strapiPost("/api/requests", {}, "jwt")).rejects.toThrow(
+      "Invalid data"
+    )
   })
 })
 
@@ -205,7 +220,10 @@ describe("strapiPut", () => {
 
   it("PUTs with the correct URL, JWT, and body", async () => {
     const patchBody = { data: { accepted: true } }
-    const responsePayload = { data: { id: 10, attributes: { accepted: true } }, meta: {} }
+    const responsePayload = {
+      data: { id: 10, attributes: { accepted: true } },
+      meta: {},
+    }
     vi.stubGlobal("fetch", mockFetch(responsePayload))
 
     const result = await strapiPut<typeof responsePayload>(
@@ -227,7 +245,11 @@ describe("strapiPut", () => {
   it("throws on error response", async () => {
     const errorBody = {
       data: null,
-      error: { status: 404, name: "NotFoundError", message: "Request not found" },
+      error: {
+        status: 404,
+        name: "NotFoundError",
+        message: "Request not found",
+      },
     }
     vi.stubGlobal("fetch", mockFetch(errorBody, false, 404))
 
