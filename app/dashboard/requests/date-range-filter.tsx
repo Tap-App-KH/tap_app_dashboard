@@ -31,7 +31,7 @@ import { IconCalendar, IconChevronDown } from "@tabler/icons-react"
 
 // ─── Presets ─────────────────────────────────────────────────────────────────
 
-type PresetKey =
+export type PresetKey =
   | "all_time"
   | "today"
   | "yesterday"
@@ -42,6 +42,19 @@ type PresetKey =
   | "this_year"
   | "last_year"
   | "custom"
+
+export const PRESET_KEYS: PresetKey[] = [
+  "all_time",
+  "today",
+  "yesterday",
+  "this_week",
+  "last_week",
+  "this_month",
+  "last_month",
+  "this_year",
+  "last_year",
+  "custom",
+]
 
 interface Preset {
   key: PresetKey
@@ -123,29 +136,17 @@ function makePresets(): Preset[] {
   ]
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function detectPreset(
-  from: Date | undefined,
-  to: Date | undefined
-): PresetKey {
-  if (!from && !to) return "all_time"
-  const presets = makePresets().filter(
-    (p) => p.key !== "all_time" && p.key !== "custom"
+export function getPresetRange(
+  key: PresetKey
+): { from: Date; to: Date } | null {
+  return (
+    makePresets()
+      .find((p) => p.key === key)
+      ?.getRange() ?? null
   )
-  for (const p of presets) {
-    const r = p.getRange()
-    if (
-      r &&
-      from &&
-      to &&
-      isSameDay(r.from, from) &&
-      isSameDay(r.to, to)
-    )
-      return p.key
-  }
-  return "custom"
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatTriggerLabel(
   from: Date | undefined,
@@ -172,14 +173,22 @@ function formatTriggerLabel(
 export interface DateRangeFilterProps {
   from: Date | undefined
   to: Date | undefined
-  onChange: (from: Date | undefined, to: Date | undefined) => void
+  preset: PresetKey
+  onChange: (
+    from: Date | undefined,
+    to: Date | undefined,
+    preset: PresetKey
+  ) => void
 }
 
-export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
+export function DateRangeFilter({
+  from,
+  to,
+  preset,
+  onChange,
+}: DateRangeFilterProps) {
   const [open, setOpen] = useState(false)
-  const [activePreset, setActivePreset] = useState<PresetKey>(() =>
-    detectPreset(from, to)
-  )
+  const [activePreset, setActivePreset] = useState<PresetKey>(preset)
   // Local draft for custom range — only committed on "Apply"
   const [customRange, setCustomRange] = useState<DateRange | undefined>(
     from || to ? { from, to } : undefined
@@ -188,24 +197,24 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
   const PRESETS = makePresets()
   const isFiltered = from !== undefined || to !== undefined
 
-  function handlePresetClick(preset: Preset) {
-    setActivePreset(preset.key)
-    if (preset.key === "custom") return // stay open, let user pick dates
-    const r = preset.getRange()
+  function handlePresetClick(p: Preset) {
+    setActivePreset(p.key)
+    if (p.key === "custom") return // stay open, let user pick dates
+    const r = p.getRange()
     setCustomRange(undefined)
-    onChange(r?.from, r?.to)
+    onChange(r?.from, r?.to, p.key)
     setOpen(false)
   }
 
   function handleApplyCustom() {
-    onChange(customRange?.from, customRange?.to)
+    onChange(customRange?.from, customRange?.to, "custom")
     setOpen(false)
   }
 
   function handleOpenChange(next: boolean) {
     if (next) {
-      // Sync local draft with current external state when opening
-      setActivePreset(detectPreset(from, to))
+      // Sync from controlled preset prop to avoid mismatches (e.g. May 1st: "today" == "this_month")
+      setActivePreset(preset)
       setCustomRange(from || to ? { from, to } : undefined)
     }
     setOpen(next)
@@ -234,20 +243,20 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
         <div className="flex">
           {/* Left: preset list */}
           <div className="flex w-36 flex-col gap-0.5 p-2">
-            {PRESETS.map((preset, i) => {
+            {PRESETS.map((p, i) => {
               const isLast = i === PRESETS.length - 1
               return (
-                <div key={preset.key}>
+                <div key={p.key}>
                   {isLast && <Separator className="my-1" />}
                   <button
                     className={cn(
                       "w-full rounded px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent",
-                      activePreset === preset.key &&
+                      activePreset === p.key &&
                         "bg-accent font-medium text-accent-foreground"
                     )}
-                    onClick={() => handlePresetClick(preset)}
+                    onClick={() => handlePresetClick(p)}
                   >
-                    {preset.label}
+                    {p.label}
                   </button>
                 </div>
               )

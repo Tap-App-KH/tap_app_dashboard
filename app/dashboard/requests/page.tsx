@@ -1,10 +1,18 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { format, parseISO } from "date-fns"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/use-auth"
 import { RequestSheet } from "./request-sheet"
-import { tabFilter, dateFilter, prevDateFilter, calcTrend, type Tab } from "./utils"
+import {
+  tabFilter,
+  dateFilter,
+  prevDateFilter,
+  calcTrend,
+  type Tab,
+} from "./utils"
 import {
   strapiGet,
   strapiPut,
@@ -41,7 +49,12 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Button } from "@/components/ui/button"
-import { DateRangeFilter } from "./date-range-filter"
+import {
+  DateRangeFilter,
+  type PresetKey,
+  PRESET_KEYS,
+  getPresetRange,
+} from "./date-range-filter"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -274,16 +287,50 @@ function TablePagination({
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+export function initPeriodFromParams(params: URLSearchParams): {
+  preset: PresetKey
+  from: Date | undefined
+  to: Date | undefined
+} {
+  const raw = params.get("period") as PresetKey | null
+  const preset: PresetKey =
+    raw && PRESET_KEYS.includes(raw) ? raw : "this_month"
+
+  if (preset === "all_time") return { preset, from: undefined, to: undefined }
+
+  if (preset === "custom") {
+    const fromStr = params.get("from")
+    const toStr = params.get("to")
+    return {
+      preset,
+      from: fromStr ? parseISO(fromStr) : undefined,
+      to: toStr ? parseISO(toStr) : undefined,
+    }
+  }
+
+  const range = getPresetRange(preset)
+  return { preset, from: range?.from, to: range?.to }
+}
+
 export default function RequestsPage() {
   const auth = useAuth()
   const queryClient = useQueryClient()
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   const [activeTab, setActiveTab] = useState<Tab>("all")
   const [page, setPage] = useState(1)
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(() => {
-    const now = new Date()
-    return new Date(now.getFullYear(), now.getMonth(), 1)
-  })
-  const [dateTo, setDateTo] = useState<Date | undefined>(() => new Date())
+
+  const [activePeriod, setActivePeriod] = useState<PresetKey>(
+    () => initPeriodFromParams(searchParams).preset
+  )
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(
+    () => initPeriodFromParams(searchParams).from
+  )
+  const [dateTo, setDateTo] = useState<Date | undefined>(
+    () => initPeriodFromParams(searchParams).to
+  )
   const [copied, setCopied] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingRequest, setEditingRequest] = useState<Request | undefined>()
@@ -336,25 +383,52 @@ export default function RequestsPage() {
   const pdf = prevDateFilter(dateFrom, dateTo)
   const { data: allStats, isLoading: statsLoading } = useCount("", auth.jwt, df)
   const { data: acceptedStats } = useCount(tabFilter("accepted"), auth.jwt, df)
-  const { data: cancelledStats } = useCount(tabFilter("cancelled"), auth.jwt, df)
+  const { data: cancelledStats } = useCount(
+    tabFilter("cancelled"),
+    auth.jwt,
+    df
+  )
   const { data: paidStats } = useCount("&filters[paid][$eq]=true", auth.jwt, df)
 
   // Previous period counts for trend badges (only when a date filter is active)
   const hasPdf = pdf !== ""
   const { data: prevAllStats } = useCount("", auth.jwt, pdf, !hasPdf)
-  const { data: prevAcceptedStats } = useCount(tabFilter("accepted"), auth.jwt, pdf, !hasPdf)
-  const { data: prevCancelledStats } = useCount(tabFilter("cancelled"), auth.jwt, pdf, !hasPdf)
-  const { data: prevPaidStats } = useCount("&filters[paid][$eq]=true", auth.jwt, pdf, !hasPdf)
+  const { data: prevAcceptedStats } = useCount(
+    tabFilter("accepted"),
+    auth.jwt,
+    pdf,
+    !hasPdf
+  )
+  const { data: prevCancelledStats } = useCount(
+    tabFilter("cancelled"),
+    auth.jwt,
+    pdf,
+    !hasPdf
+  )
+  const { data: prevPaidStats } = useCount(
+    "&filters[paid][$eq]=true",
+    auth.jwt,
+    pdf,
+    !hasPdf
+  )
 
   const total = allStats?.meta.pagination?.total ?? 0
   const acceptedTotal = acceptedStats?.meta.pagination?.total ?? 0
   const cancelledTotal = cancelledStats?.meta.pagination?.total ?? 0
   const paidTotal = paidStats?.meta.pagination?.total ?? 0
 
-  const prevTotal = hasPdf ? (prevAllStats?.meta.pagination?.total ?? 0) : undefined
-  const prevAcceptedTotal = hasPdf ? (prevAcceptedStats?.meta.pagination?.total ?? 0) : undefined
-  const prevCancelledTotal = hasPdf ? (prevCancelledStats?.meta.pagination?.total ?? 0) : undefined
-  const prevPaidTotal = hasPdf ? (prevPaidStats?.meta.pagination?.total ?? 0) : undefined
+  const prevTotal = hasPdf
+    ? (prevAllStats?.meta.pagination?.total ?? 0)
+    : undefined
+  const prevAcceptedTotal = hasPdf
+    ? (prevAcceptedStats?.meta.pagination?.total ?? 0)
+    : undefined
+  const prevCancelledTotal = hasPdf
+    ? (prevCancelledStats?.meta.pagination?.total ?? 0)
+    : undefined
+  const prevPaidTotal = hasPdf
+    ? (prevPaidStats?.meta.pagination?.total ?? 0)
+    : undefined
   // Main paginated table query
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["requests", activeTab, page, df],
@@ -375,10 +449,34 @@ export default function RequestsPage() {
     setPage(1)
   }
 
-  function handleDateChange(from: Date | undefined, to: Date | undefined) {
+  function handleDateChange(
+    from: Date | undefined,
+    to: Date | undefined,
+    preset: PresetKey
+  ) {
     setDateFrom(from)
     setDateTo(to)
+    setActivePeriod(preset)
     setPage(1)
+
+    const params = new URLSearchParams(searchParams.toString())
+    if (preset === "all_time") {
+      params.delete("period")
+      params.delete("from")
+      params.delete("to")
+    } else if (preset === "custom") {
+      params.set("period", "custom")
+      if (from) params.set("from", format(from, "yyyy-MM-dd"))
+      else params.delete("from")
+      if (to) params.set("to", format(to, "yyyy-MM-dd"))
+      else params.delete("to")
+    } else {
+      params.set("period", preset)
+      params.delete("from")
+      params.delete("to")
+    }
+    const qs = params.toString()
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false })
   }
 
   const TABS: { value: Tab; label: string; count: number }[] = [
@@ -397,9 +495,10 @@ export default function RequestsPage() {
           <DateRangeFilter
             from={dateFrom}
             to={dateTo}
+            preset={activePeriod}
             onChange={handleDateChange}
           />
-          <div className="bg-border h-5 w-px" />
+          <div className="h-5 w-px bg-border" />
           <Button size="sm" onClick={openCreate} className="gap-2">
             <IconPlus className="size-4" />
             New Request
@@ -509,208 +608,211 @@ export default function RequestsPage() {
                 {!isLoading && !isError && (
                   <>
                     <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-36 pl-6">Ref ID</TableHead>
-                          <TableHead>Passenger</TableHead>
-                          <TableHead>Phone</TableHead>
-                          <TableHead>From</TableHead>
-                          <TableHead>To</TableHead>
-                          <TableHead className="text-right">Price</TableHead>
-                          <TableHead>Pickup At</TableHead>
-                          <TableHead>Submitted At</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="w-10 pr-6" />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {requests.length === 0 ? (
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell
-                              colSpan={11}
-                              className="py-12 text-center text-muted-foreground"
-                            >
-                              No requests in this category
-                            </TableCell>
+                            <TableHead className="w-36 pl-6">Ref ID</TableHead>
+                            <TableHead>Passenger</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>From</TableHead>
+                            <TableHead>To</TableHead>
+                            <TableHead className="text-right">Price</TableHead>
+                            <TableHead>Pickup At</TableHead>
+                            <TableHead>Submitted At</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="w-10 pr-6" />
                           </TableRow>
-                        ) : (
-                          requests.map((req) => {
-                            const a = req.attributes
-                            return (
-                              <TableRow
-                                key={req.id}
-                                className="cursor-pointer"
-                                onClick={() => openEdit(req)}
+                        </TableHeader>
+                        <TableBody>
+                          {requests.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={11}
+                                className="py-12 text-center text-muted-foreground"
                               >
-                                <TableCell className="pl-6 font-mono text-xs">
-                                  {a.ref_id ?? "—"}
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {a.requester_details?.fullname ?? "—"}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                  {[
-                                    a.requester_details?.phoneCode?.value,
-                                    a.requester_details?.phone,
-                                  ]
-                                    .filter(Boolean)
-                                    .join("") || "—"}
-                                </TableCell>
-                                <TableCell className="max-w-40 truncate text-muted-foreground">
-                                  {(
-                                    a.transfer_details?.from as {
-                                      attributes?: { name?: string }
-                                    } | null
-                                  )?.attributes?.name ?? "—"}
-                                </TableCell>
-                                <TableCell className="max-w-40 truncate text-muted-foreground">
-                                  {(
-                                    a.transfer_details?.to as {
-                                      attributes?: { name?: string }
-                                    } | null
-                                  )?.attributes?.name ?? "—"}
-                                </TableCell>
-                                <TableCell className="text-right text-muted-foreground">
-                                  {a.transfer_details?.price != null
-                                    ? `$${Number(a.transfer_details.price).toFixed(2)}`
-                                    : "—"}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                  {(() => {
-                                    const date =
-                                      resolveField(
-                                        a.pickup_dropoff_details?.pickupDate
-                                      ) !== "—"
-                                        ? resolveField(
-                                            a.pickup_dropoff_details?.pickupDate
-                                          )
-                                        : (a.date ?? "")
-                                    const time = resolveField(
-                                      a.pickup_dropoff_details?.pickupTime
-                                    )
-                                    if (!date) return "—"
-                                    return time !== "—"
-                                      ? formatDateTime(date, time)
-                                      : formatDate(date)
-                                  })()}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                  {a.createdAt
-                                    ? formatDateTime(a.createdAt)
-                                    : "—"}
-                                </TableCell>
-                                <TableCell>
-                                  <StatusBadge attrs={a} />
-                                </TableCell>
-                                <TableCell
-                                  className="pr-6"
-                                  onClick={(e) => e.stopPropagation()}
+                                No requests in this category
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            requests.map((req) => {
+                              const a = req.attributes
+                              return (
+                                <TableRow
+                                  key={req.id}
+                                  className="cursor-pointer"
+                                  onClick={() => openEdit(req)}
                                 >
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon-sm">
-                                        <IconDotsVertical className="size-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="end"
-                                      className="w-44"
-                                    >
-                                      {!a.accepted && (
-                                        <DropdownMenuItem
-                                          className="whitespace-nowrap"
-                                          disabled={!!a.cancelled}
-                                          onClick={() =>
-                                            updateStatus(
-                                              req,
-                                              { accepted: true },
-                                              "Marked as accepted"
+                                  <TableCell className="pl-6 font-mono text-xs">
+                                    {a.ref_id ?? "—"}
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {a.requester_details?.fullname ?? "—"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {[
+                                      a.requester_details?.phoneCode?.value,
+                                      a.requester_details?.phone,
+                                    ]
+                                      .filter(Boolean)
+                                      .join("") || "—"}
+                                  </TableCell>
+                                  <TableCell className="max-w-40 truncate text-muted-foreground">
+                                    {(
+                                      a.transfer_details?.from as {
+                                        attributes?: { name?: string }
+                                      } | null
+                                    )?.attributes?.name ?? "—"}
+                                  </TableCell>
+                                  <TableCell className="max-w-40 truncate text-muted-foreground">
+                                    {(
+                                      a.transfer_details?.to as {
+                                        attributes?: { name?: string }
+                                      } | null
+                                    )?.attributes?.name ?? "—"}
+                                  </TableCell>
+                                  <TableCell className="text-right text-muted-foreground">
+                                    {a.transfer_details?.price != null
+                                      ? `$${Number(a.transfer_details.price).toFixed(2)}`
+                                      : "—"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {(() => {
+                                      const date =
+                                        resolveField(
+                                          a.pickup_dropoff_details?.pickupDate
+                                        ) !== "—"
+                                          ? resolveField(
+                                              a.pickup_dropoff_details
+                                                ?.pickupDate
                                             )
-                                          }
-                                        >
-                                          <IconCircleCheck className="size-4" />
-                                          Mark as Accepted
-                                        </DropdownMenuItem>
-                                      )}
-                                      {!a.accepted && <DropdownMenuSeparator />}
-                                      {!a.paid ? (
-                                        <DropdownMenuItem
-                                          className="whitespace-nowrap"
-                                          disabled={
-                                            !a.accepted || !!a.cancelled
-                                          }
-                                          onClick={() =>
-                                            updateStatus(
-                                              req,
-                                              { paid: true },
-                                              "Marked as paid"
-                                            )
-                                          }
-                                        >
-                                          <IconCreditCard className="size-4" />
-                                          Mark as Paid
-                                        </DropdownMenuItem>
-                                      ) : (
-                                        <DropdownMenuItem
-                                          className="whitespace-nowrap"
-                                          disabled={!!a.cancelled}
-                                          onClick={() =>
-                                            updateStatus(
-                                              req,
-                                              { paid: false },
-                                              "Marked as refunded"
-                                            )
-                                          }
-                                        >
-                                          <IconReceiptRefund className="size-4" />
-                                          Refund
-                                        </DropdownMenuItem>
-                                      )}
-                                      <DropdownMenuSeparator />
-                                      {!a.cancelled ? (
-                                        <DropdownMenuItem
-                                          className="whitespace-nowrap text-destructive focus:text-destructive"
-                                          disabled={!!a.paid}
-                                          onClick={() =>
-                                            updateStatus(
-                                              req,
-                                              {
-                                                cancelled: true,
-                                                accepted: false,
-                                                paid: false,
-                                              },
-                                              "Request cancelled"
-                                            )
-                                          }
-                                        >
-                                          <IconCircleX className="size-4" />
-                                          Cancel
-                                        </DropdownMenuItem>
-                                      ) : (
-                                        <DropdownMenuItem
-                                          className="whitespace-nowrap"
-                                          onClick={() =>
-                                            updateStatus(
-                                              req,
-                                              { cancelled: false },
-                                              "Cancellation removed"
-                                            )
-                                          }
-                                        >
-                                          <IconArrowBackUp className="size-4" />
-                                          Uncancel
-                                        </DropdownMenuItem>
-                                      )}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
+                                          : (a.date ?? "")
+                                      const time = resolveField(
+                                        a.pickup_dropoff_details?.pickupTime
+                                      )
+                                      if (!date) return "—"
+                                      return time !== "—"
+                                        ? formatDateTime(date, time)
+                                        : formatDate(date)
+                                    })()}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {a.createdAt
+                                      ? formatDateTime(a.createdAt)
+                                      : "—"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <StatusBadge attrs={a} />
+                                  </TableCell>
+                                  <TableCell
+                                    className="pr-6"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon-sm">
+                                          <IconDotsVertical className="size-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent
+                                        align="end"
+                                        className="w-44"
+                                      >
+                                        {!a.accepted && (
+                                          <DropdownMenuItem
+                                            className="whitespace-nowrap"
+                                            disabled={!!a.cancelled}
+                                            onClick={() =>
+                                              updateStatus(
+                                                req,
+                                                { accepted: true },
+                                                "Marked as accepted"
+                                              )
+                                            }
+                                          >
+                                            <IconCircleCheck className="size-4" />
+                                            Mark as Accepted
+                                          </DropdownMenuItem>
+                                        )}
+                                        {!a.accepted && (
+                                          <DropdownMenuSeparator />
+                                        )}
+                                        {!a.paid ? (
+                                          <DropdownMenuItem
+                                            className="whitespace-nowrap"
+                                            disabled={
+                                              !a.accepted || !!a.cancelled
+                                            }
+                                            onClick={() =>
+                                              updateStatus(
+                                                req,
+                                                { paid: true },
+                                                "Marked as paid"
+                                              )
+                                            }
+                                          >
+                                            <IconCreditCard className="size-4" />
+                                            Mark as Paid
+                                          </DropdownMenuItem>
+                                        ) : (
+                                          <DropdownMenuItem
+                                            className="whitespace-nowrap"
+                                            disabled={!!a.cancelled}
+                                            onClick={() =>
+                                              updateStatus(
+                                                req,
+                                                { paid: false },
+                                                "Marked as refunded"
+                                              )
+                                            }
+                                          >
+                                            <IconReceiptRefund className="size-4" />
+                                            Refund
+                                          </DropdownMenuItem>
+                                        )}
+                                        <DropdownMenuSeparator />
+                                        {!a.cancelled ? (
+                                          <DropdownMenuItem
+                                            className="whitespace-nowrap text-destructive focus:text-destructive"
+                                            disabled={!!a.paid}
+                                            onClick={() =>
+                                              updateStatus(
+                                                req,
+                                                {
+                                                  cancelled: true,
+                                                  accepted: false,
+                                                  paid: false,
+                                                },
+                                                "Request cancelled"
+                                              )
+                                            }
+                                          >
+                                            <IconCircleX className="size-4" />
+                                            Cancel
+                                          </DropdownMenuItem>
+                                        ) : (
+                                          <DropdownMenuItem
+                                            className="whitespace-nowrap"
+                                            onClick={() =>
+                                              updateStatus(
+                                                req,
+                                                { cancelled: false },
+                                                "Cancellation removed"
+                                              )
+                                            }
+                                          >
+                                            <IconArrowBackUp className="size-4" />
+                                            Uncancel
+                                          </DropdownMenuItem>
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
                     </div>
 
                     <div className="flex items-center justify-between border-t px-6 py-3">
