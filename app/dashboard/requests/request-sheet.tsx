@@ -643,11 +643,11 @@ export function RequestSheet({
                       )
                         e.preventDefault()
                     }}
+                    {...register("costPrice")}
                     onBlur={(e) => {
                       const val = parseFloat(e.target.value)
                       if (!isNaN(val)) setValue("costPrice", val.toFixed(2))
                     }}
-                    {...register("costPrice")}
                   />
                 </div>
               </div>
@@ -671,11 +671,11 @@ export function RequestSheet({
                       )
                         e.preventDefault()
                     }}
+                    {...register("price")}
                     onBlur={(e) => {
                       const val = parseFloat(e.target.value)
                       if (!isNaN(val)) setValue("price", val.toFixed(2))
                     }}
-                    {...register("price")}
                   />
                 </div>
                 {errors.price && (
